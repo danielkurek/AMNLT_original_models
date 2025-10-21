@@ -4,7 +4,7 @@
 
 <h1 align="center">Aligned Music Notation and Lyrics Transcription</h1>
 
-<h4 align="center">📄 Full paper available <a href="" target="_blank">here</a>.</h4>
+<h4 align="center">📄 Full paper available <a href="https://www.sciencedirect.com/science/article/pii/S003132032500754X" target="_blank">here</a>.</h4>
 
 <p align="center">
   <img src="https://img.shields.io/badge/python-3.9.0-orange" alt="Gitter">
@@ -53,15 +53,15 @@ python main.py [arguments]
 ## 📖 Citations
 
 ```bibtex
-@article{john2025doe,
-  title     = {{}},
-  author    = {},
-  journal   = {{}},
-  volume    = {},
-  pages     = {},
-  year      = {},
-  publisher = {},
-  doi       = {},
+@article{FUENTESMARTINEZ2026112094,
+  title     = {Aligned music notation and lyrics transcription},
+  author    = {Eliseo Fuentes-Martínez and Antonio Ríos-Vila and Juan C. Martinez-Sevilla and David Rizo and Jorge Calvo-Zaragoza},
+  journal   = {Pattern Recognition},
+  volume    = {170},
+  pages     = {112094},
+  year      = {2026},
+  issn      = {0031-3203},
+  doi       = {https://doi.org/10.1016/j.patcog.2025.112094},
 }
 ```
 
