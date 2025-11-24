@@ -4,7 +4,7 @@ import random
 import torch
 import torch.nn.functional as F
 
-from my_utils.data_preprocessing import NUM_CHANNELS, IMG_HEIGHT
+from AMNLT.utils.dc_base_unfolding_utils.data_preprocessing import NUM_CHANNELS, IMG_HEIGHT
 
 BN_IDS = [1, 5, 9, 13]
 

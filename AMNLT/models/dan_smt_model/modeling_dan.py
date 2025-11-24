@@ -4,7 +4,7 @@ import numpy as np
 from torch.nn.init import xavier_uniform_
 from transformers import ConvNextConfig, ConvNextModel, PreTrainedModel
 from transformers.modeling_outputs import CausalLMOutputWithCrossAttentions
-from smt_model import VAN_Encoder
+from .van_encoder import VAN_Encoder
 
 from .configuration_smt import SMTConfig
 

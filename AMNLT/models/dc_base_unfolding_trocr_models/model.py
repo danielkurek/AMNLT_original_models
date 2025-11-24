@@ -12,11 +12,11 @@ from torch.nn import CTCLoss
 from torchinfo import summary
 from torchvision.utils import save_image
 
-from my_utils.augmentations import AugmentStage
-from my_utils.data_preprocessing import IMG_HEIGHT, NUM_CHANNELS
-from my_utils.metrics import compute_metrics, ctc_greedy_decoder
-from models.modules import CRNN
-from models.modules import E2EScore_FCN, E2EScore_CRNN, E2EScore_CNNT2D, E2EScore_VAN, VANCTCModel
+from AMNLT.utils.dc_base_unfolding_utils.augmentations import AugmentStage
+from AMNLT.utils.dc_base_unfolding_utils.data_preprocessing import IMG_HEIGHT, NUM_CHANNELS
+from AMNLT.utils.dc_base_unfolding_utils.metrics import compute_metrics, ctc_greedy_decoder
+from AMNLT.models.dc_base_unfolding_trocr_models.modules import CRNN
+from AMNLT.models.dc_base_unfolding_trocr_models.modules import E2EScore_FCN, E2EScore_CRNN, E2EScore_CNNT2D, E2EScore_VAN, VANCTCModel
 
 from transformers import VisionEncoderDecoderModel, TrOCRProcessor, PreTrainedTokenizerFast
 

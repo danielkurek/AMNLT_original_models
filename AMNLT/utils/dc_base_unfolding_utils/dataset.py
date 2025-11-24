@@ -7,7 +7,7 @@ from PIL import Image
 import torch
 from torch.utils.data import Dataset
 
-from my_utils.data_preprocessing import (
+from AMNLT.utils.dc_base_unfolding_utils.data_preprocessing import (
     preprocess_image_from_file,
     preprocess_transcript_from_file,
 )

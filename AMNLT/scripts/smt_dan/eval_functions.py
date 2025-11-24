@@ -1,4 +1,4 @@
-from utils import levenshtein
+from AMNLT.utils.smt_dan_utils.utils import levenshtein
 
 def compute_metric(a1, a2):
     acc_ed_dist = 0

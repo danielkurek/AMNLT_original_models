@@ -7,10 +7,10 @@ import lightning.pytorch as L
 import sys
 
 from torchinfo import summary
-from eval_functions import compute_poliphony_metrics, compute_metric
-from smt_model import SMTConfig
-from smt_model import SMTModelForCausalLM
-from smt_model.modeling_dan import DANForCausalLM
+from .eval_functions import compute_poliphony_metrics, compute_metric
+from AMNLT.models.dan_smt_model.configuration_smt import SMTConfig
+from AMNLT.models.dan_smt_model.modeling_smt import SMTModelForCausalLM
+from AMNLT.models.dan_smt_model.modeling_dan import DANForCausalLM
 
 class DAN_Trainer(L.LightningModule):
     def __init__(self, maxh, maxw, maxlen, out_categories, padding_token, in_channels, w2i, i2w, d_model=256, dim_ff=256, num_dec_layers=8):

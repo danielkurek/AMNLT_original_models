@@ -9,9 +9,9 @@ from lightning.pytorch import Trainer
 from lightning.pytorch.loggers.wandb import WandbLogger
 from torch.utils.data import DataLoader
 
-from data.config import DS_CONFIG
-from my_utils.dataset import CTCDataset
-from models.model import CTCTrainedCRNN, LightningE2EModelUnfolding
+from AMNLT.configs.dc_base_unfolding_trocr_config.config import DS_CONFIG
+from AMNLT.utils.dc_base_unfolding_utils.dataset import CTCDataset
+from AMNLT.models.dc_base_unfolding_trocr_models.model import CTCTrainedCRNN, LightningE2EModelUnfolding
 
 # Seed
 random.seed(42)

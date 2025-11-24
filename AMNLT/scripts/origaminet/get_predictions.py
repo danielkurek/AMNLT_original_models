@@ -7,7 +7,7 @@ import gin
 
 from AMNLT.utils.origami_utils.utils import CTCLabelConverter
 from AMNLT.models.origami_model.cnv_model import OrigamiNet, ginM
-from test import validation
+from .test import validation
 import AMNLT.utils.origami_utils.ds_load as ds_load
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

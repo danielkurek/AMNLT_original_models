@@ -31,7 +31,7 @@ import AMNLT.utils.origami_utils.ds_load as ds_load
 
 from AMNLT.utils.origami_utils.utils import CTCLabelConverter, Averager, ModelEma, Metric
 from AMNLT.models.origami_model.cnv_model import OrigamiNet, ginM
-from test import validation
+from .test import validation
 
 parOptions = namedtuple('parOptions', ['DP', 'DDP', 'HVD'])
 parOptions.__new__.__defaults__ = (False,) * len(parOptions._fields)

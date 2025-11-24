@@ -9,10 +9,10 @@ from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
 from lightning.pytorch.loggers.wandb import WandbLogger
 from torch.utils.data import DataLoader
 
-from my_utils.data_preprocessing import ctc_batch_preparation
-from my_utils.dataset import CTCDataset
-from data.config import DS_CONFIG
-from models.model import CTCTrainedCRNN, LightningE2EModelUnfolding, CTCTrainedVAN
+from AMNLT.utils.dc_base_unfolding_utils.data_preprocessing import ctc_batch_preparation
+from AMNLT.utils.dc_base_unfolding_utils.dataset import CTCDataset
+from AMNLT.configs.dc_base_unfolding_trocr_config.config import DS_CONFIG
+from AMNLT.models.dc_base_unfolding_trocr_models.model import CTCTrainedCRNN, LightningE2EModelUnfolding #, CTCTrainedVAN # <- appears to be missing
 
 # Seed
 random.seed(42)

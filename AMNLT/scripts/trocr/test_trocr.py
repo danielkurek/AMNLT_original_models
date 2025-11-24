@@ -6,10 +6,10 @@ from torch.utils.data import DataLoader
 from lightning.pytorch import Trainer
 from transformers import TrOCRProcessor, PreTrainedTokenizerFast
 
-from models.model import CTCTrainedTrOCR
-from my_utils.dataset import CTCDataset
-from my_utils.data_preprocessing import trocr_batch_preparation
-from data.config import DS_CONFIG
+from AMNLT.models.dc_base_unfolding_trocr_models.model import CTCTrainedTrOCR
+from AMNLT.utils.dc_base_unfolding_utils.dataset import CTCDataset
+from AMNLT.utils.dc_base_unfolding_utils.data_preprocessing import trocr_batch_preparation
+from AMNLT.configs.dc_base_unfolding_trocr_config.config import DS_CONFIG
 
 
 def test_trocr(
