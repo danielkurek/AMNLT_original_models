@@ -1,0 +1,62 @@
+[build-system]
+requires = ["hatchling >= 1.26"]
+build-backend = "hatchling.build"
+
+[project]
+name = "AMNLT"
+version = "2025.0.0"
+dependencies = [
+    "numpy",
+    "matplotlib",
+    "scikit-learn",
+    "fire",
+    "lightning",
+    "torchinfo",
+    "wandb>=0.12.10",
+    "jiwer",
+    "opencv_python_headless>=4.1.2.30",
+    "natsort",
+    "numpy",
+    "tqdm",
+    "lmdb",
+    "scikit_image",
+    "matplotlib",
+    "torchsummary",
+    "nltk",
+    "torchvision",
+    "imageio",
+    "six",
+    "scipy",
+    "fire",
+    "Pillow",
+    "scikit_learn",
+    "editdistance",
+    "gin-config @ git+https://github.com/google/gin-config",
+    "fire",
+    "gin_config",
+    "lightning",
+    "loguru",
+    "musicdiff",
+    "numpy",
+    "opencv_python",
+    "opencv_python_headless",
+    "Pillow",
+    "rich",
+    "scikit-image",
+    "timm",
+    "torch",
+    "torchinfo",
+    "torchvision",
+    "transformers",
+    "visualizer",
+    "wandb>=0.12.10"
+]
+classifiers = [
+    "Private :: Do Not Upload"
+]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+only-include = ["AMNLT"]
