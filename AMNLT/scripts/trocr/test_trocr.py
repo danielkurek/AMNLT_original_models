@@ -9,7 +9,6 @@ from transformers import TrOCRProcessor, PreTrainedTokenizerFast
 from AMNLT.models.dc_base_unfolding_trocr_models.model import CTCTrainedTrOCR
 from AMNLT.utils.dc_base_unfolding_utils.dataset import CTCDataset
 from AMNLT.utils.dc_base_unfolding_utils.data_preprocessing import trocr_batch_preparation
-from AMNLT.configs.dc_base_unfolding_trocr_config.config import DS_CONFIG
 
 
 def test_trocr(
@@ -35,10 +34,8 @@ def test_trocr(
 
     # Load test dataset
     test_ds = CTCDataset(
-        name=ds_name,
-        samples_filepath=DS_CONFIG[ds_name]["test"],
-        transcripts_folder=DS_CONFIG[ds_name]["transcripts"],
-        img_folder=DS_CONFIG[ds_name]["images"],
+        ds_name=ds_name,
+        split="test",
         model_name="trocr",
         train=False,
         encoding_type=encoding_type,

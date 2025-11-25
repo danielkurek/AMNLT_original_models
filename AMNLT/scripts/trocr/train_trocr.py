@@ -13,7 +13,6 @@ from transformers import TrOCRProcessor, PreTrainedTokenizerFast
 from AMNLT.models.dc_base_unfolding_trocr_models.model import CTCTrainedTrOCR
 from AMNLT.utils.dc_base_unfolding_utils.dataset import CTCDataset
 from AMNLT.utils.dc_base_unfolding_utils.data_preprocessing import trocr_batch_preparation
-from AMNLT.configs.dc_base_unfolding_trocr_config.config import DS_CONFIG
 
 # Reproducibility
 random.seed(42)
@@ -52,27 +51,21 @@ def train_trocr(
 
     # Load datasets
     train_ds = CTCDataset(
-        name=ds_name,
-        samples_filepath=DS_CONFIG[ds_name]["train"],
-        transcripts_folder=DS_CONFIG[ds_name]["transcripts"],
-        img_folder=DS_CONFIG[ds_name]["images"],
+        ds_name=ds_name,
+        split="train",
         model_name="trocr",
         encoding_type=encoding_type,
     )
     val_ds = CTCDataset(
-        name=ds_name,
-        samples_filepath=DS_CONFIG[ds_name]["val"],
-        transcripts_folder=DS_CONFIG[ds_name]["transcripts"],
-        img_folder=DS_CONFIG[ds_name]["images"],
+        ds_name=ds_name,
+        split="validation",
         model_name="trocr",
         train=False,
         encoding_type=encoding_type,
     )
     test_ds = CTCDataset(
-        name=ds_name,
-        samples_filepath=DS_CONFIG[ds_name]["test"],
-        transcripts_folder=DS_CONFIG[ds_name]["transcripts"],
-        img_folder=DS_CONFIG[ds_name]["images"],
+        ds_name=ds_name,
+        split="test",
         model_name="trocr",
         train=False,
         encoding_type=encoding_type,

@@ -11,7 +11,6 @@ from torch.utils.data import DataLoader
 
 from AMNLT.utils.dc_base_unfolding_utils.data_preprocessing import ctc_batch_preparation
 from AMNLT.utils.dc_base_unfolding_utils.dataset import CTCDataset
-from AMNLT.configs.dc_base_unfolding_trocr_config.config import DS_CONFIG
 from AMNLT.models.dc_base_unfolding_trocr_models.model import CTCTrainedCRNN, LightningE2EModelUnfolding #, CTCTrainedVAN # <- appears to be missing
 
 # Seed
@@ -43,9 +42,6 @@ def train(
     gc.collect()
     torch.cuda.empty_cache()
 
-    # Check if dataset exists
-    if ds_name not in DS_CONFIG.keys():
-        raise NotImplementedError(f"Dataset {ds_name} not implemented")
 
     # Experiment info
     print(f"Running experiment: {project} - {group} - {model_name}")
@@ -58,10 +54,8 @@ def train(
 
     # Get datasets
     train_ds = CTCDataset(
-        name=ds_name,
-        samples_filepath=DS_CONFIG[ds_name]["train"],
-        transcripts_folder=DS_CONFIG[ds_name]["transcripts"],
-        img_folder=DS_CONFIG[ds_name]["images"],
+        ds_name=ds_name,
+        split="train",
         model_name=model_name,
         encoding_type=encoding_type,
     )        
@@ -73,10 +67,8 @@ def train(
         collate_fn=ctc_batch_preparation,
     )  # prefetch_factor=2
     val_ds = CTCDataset(
-        name=ds_name,
-        samples_filepath=DS_CONFIG[ds_name]["val"],
-        transcripts_folder=DS_CONFIG[ds_name]["transcripts"],
-        img_folder=DS_CONFIG[ds_name]["images"],
+        ds_name=ds_name,
+        split="validation",
         model_name=model_name,
         train=False,
         encoding_type=encoding_type,
@@ -85,10 +77,8 @@ def train(
         val_ds, batch_size=1, shuffle=False, num_workers=20
     )  # prefetch_factor=2
     test_ds = CTCDataset(
-        name=ds_name,
-        samples_filepath=DS_CONFIG[ds_name]["test"],
-        transcripts_folder=DS_CONFIG[ds_name]["transcripts"],
-        img_folder=DS_CONFIG[ds_name]["images"],
+        ds_name=ds_name,
+        split="test",
         model_name=model_name,
         train=False,
         encoding_type=encoding_type,

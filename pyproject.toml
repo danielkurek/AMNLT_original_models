@@ -6,6 +6,7 @@ build-backend = "hatchling.build"
 name = "AMNLT"
 version = "2025.0.0"
 dependencies = [
+    "datasets",
     "numpy",
     "matplotlib",
     "scikit-learn",

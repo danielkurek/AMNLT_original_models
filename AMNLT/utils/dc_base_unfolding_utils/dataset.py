@@ -7,6 +7,8 @@ from PIL import Image
 import torch
 from torch.utils.data import Dataset
 
+from datasets import load_dataset
+
 from AMNLT.utils.dc_base_unfolding_utils.data_preprocessing import (
     preprocess_image_from_file,
     preprocess_transcript_from_file,
@@ -16,19 +18,20 @@ from AMNLT.utils.dc_base_unfolding_utils.data_preprocessing import (
 
 
 class CTCDataset(Dataset):
+    IMAGE = "image"
+    TRANSCRIPT = "transcription"
+
     def __init__(
         self,
-        name,
-        samples_filepath,
-        transcripts_folder,
-        img_folder,
+        ds_name,
+        split,
         model_name,
         train=True,
         da_train=False,
         width_reduction=2,
         encoding_type="char",
     ):
-        self.name = name
+        self.name = ds_name
         self.model_name = model_name
         self.train = train
         self.da_train = da_train
@@ -36,9 +39,7 @@ class CTCDataset(Dataset):
         self.encoding_type = encoding_type
 
         # Get image paths and transcripts
-        self.X, self.Y = self.get_images_and_transcripts_filepaths(
-            samples_filepath, img_folder, transcripts_folder
-        )
+        self.X, self.Y = self.load_data(ds_name, split)
         
         self.printbatch = False
 
@@ -47,7 +48,7 @@ class CTCDataset(Dataset):
         vocab_folder = os.path.join(os.path.join("data", self.name), "vocab")
         os.makedirs(vocab_folder, exist_ok=True)
         self.w2i_path = os.path.join(vocab_folder, vocab_name)
-        self.w2i, self.i2w = self.check_and_retrieve_vocabulary(transcripts_folder)
+        self.w2i, self.i2w = self.check_and_retrieve_vocabulary(ds_name)
 
     def __len__(self):
         return len(self.X)
@@ -122,36 +123,11 @@ class CTCDataset(Dataset):
             max_width = max(max_width, x.shape[2])
         return max_height, max_width
 
-    def get_images_and_transcripts_filepaths(
-        self, img_dat_file_path, img_directory, transcripts_directory
-    ):
-        images = []
-        transcripts = []
-        
-        # Images and transcripts are in different directories
-        # Image filepath example: {image_name}.jpg
-        # Transcript filepath example: {image_name}.jpg.txt
+    def load_data(self, ds_name, split):
+        ds = load_dataset(ds_name, split=split)
+        return ds[self.IMAGE], ds[self.TRANSCRIPT]
 
-        # We are using the agnostic encoding for the transcripts
-
-        # Read the .dat file to get the image file names
-        with open(img_dat_file_path, "r") as file:
-            img_files = file.read().splitlines()
-
-        for img_file in img_files:
-            file_name_without_extension, _ = os.path.splitext(img_file)
-            img_path = os.path.join(img_directory, img_file)
-
-            transcript_file = file_name_without_extension + ".gabc"
-            transcript_path = os.path.join(transcripts_directory, transcript_file)
-
-            if os.path.exists(img_path) and os.path.exists(transcript_path):
-                images.append(img_path)
-                transcripts.append(transcript_path)
-
-        return images, transcripts
-
-    def check_and_retrieve_vocabulary(self, transcripts_dir):
+    def check_and_retrieve_vocabulary(self, ds_name):
         w2i = {}
         i2w = {}
 
@@ -160,25 +136,25 @@ class CTCDataset(Dataset):
                 w2i = json.load(file)
             i2w = {v: k for k, v in w2i.items()}
         else:
-            w2i, i2w = self.make_vocabulary(transcripts_dir)
+            w2i, i2w = self.make_vocabulary(ds_name)
             with open(self.w2i_path, "w") as file:
                 json.dump(w2i, file)
 
         return w2i, i2w
     
-    def make_vocabulary(self, transcripts_dir):
+    def make_vocabulary(self, ds_name):
         vocab = set()
+        ds = load_dataset(ds_name)
         print(self.encoding_type)
         if (self.encoding_type == "char") or (self.encoding_type == "new_gabc" and self.name in ["einsiedeln_lyrics", "salzinnes_lyrics"]):
-            for transcript_file in os.listdir(transcripts_dir):
-                with open(os.path.join(transcripts_dir, transcript_file), "r") as file:
-                    chars = file.read().strip()
-                    vocab.update(chars)
+            for split in ds.keys():
+                for y in ds[split][self.TRANSCRIPT]:
+                    vocab.update(y.strip())
         elif self.encoding_type == "music_aware":
-            for transcript_file in os.listdir(transcripts_dir):
-                with open(os.path.join(transcripts_dir, transcript_file), "r") as file:
+            for split in ds.keys():
+                for y in ds[split][self.TRANSCRIPT]:
                     # Leer todo el contenido del archivo
-                    content = file.read().strip()
+                    content = y.strip()
                     i = 0
                     while i < len(content):
                         if content[i:i+3] == "<m>":  # Check if the token starts with the musical tag
@@ -193,9 +169,9 @@ class CTCDataset(Dataset):
                             vocab.add(content[i])
                         i += 1
         elif self.encoding_type == "new_gabc" and self.name in ["einsiedeln", "salzinnes"]:
-            for transcript_file in os.listdir(transcripts_dir):
-                with open(os.path.join(transcripts_dir, transcript_file), "r") as file:
-                    content = file.read()
+            for split in ds.keys():
+                for y in ds[split][self.TRANSCRIPT]:
+                    content = y
                     i = 0
                     while i < len(content):
                         if content[i] == '(':
@@ -220,9 +196,9 @@ class CTCDataset(Dataset):
                             i += 1
                             
         elif self.encoding_type == "new_gabc" and self.name in ["einsiedeln_music", "salzinnes_music"]:
-            for transcript_file in os.listdir(transcripts_dir):
-                with open(os.path.join(transcripts_dir, transcript_file), "r") as file:
-                    content = file.read().strip()
+            for split in ds.keys():
+                for y in ds[split][self.TRANSCRIPT]:
+                    content = y.strip()
                     i = 0
                     temp = ''
                     while i < len(content):

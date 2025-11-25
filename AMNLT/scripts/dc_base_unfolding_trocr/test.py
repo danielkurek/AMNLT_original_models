@@ -9,7 +9,6 @@ from lightning.pytorch import Trainer
 from lightning.pytorch.loggers.wandb import WandbLogger
 from torch.utils.data import DataLoader
 
-from AMNLT.configs.dc_base_unfolding_trocr_config.config import DS_CONFIG
 from AMNLT.utils.dc_base_unfolding_utils.dataset import CTCDataset
 from AMNLT.models.dc_base_unfolding_trocr_models.model import CTCTrainedCRNN, LightningE2EModelUnfolding
 
@@ -40,9 +39,6 @@ def test(
     if not os.path.exists(checkpoint_path):
         raise FileNotFoundError(f"Checkpoint path {checkpoint_path} does not exist")
 
-    # Check if dataset exists
-    if ds_name not in DS_CONFIG.keys():
-        raise NotImplementedError(f"Test dataset {ds_name} not implemented")
 
     # Experiment info
     print(f"Running experiment: {project} - {group}")
@@ -52,10 +48,8 @@ def test(
 
     # Dataset
     test_ds = CTCDataset(
-        name=ds_name,
-        samples_filepath=DS_CONFIG[ds_name]["test"],
-        transcripts_folder=DS_CONFIG[ds_name]["transcripts"],
-        img_folder=DS_CONFIG[ds_name]["images"],
+        ds_name=ds_name,
+        split="test",
         model_name=model_name,
         train=False,
         encoding_type=encoding_type,
