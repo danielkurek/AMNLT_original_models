@@ -169,7 +169,7 @@ class CTCDataset(Dataset):
                             # Add the normal character to the vocabulary
                             vocab.add(content[i])
                         i += 1
-        elif self.encoding_type == "new_gabc" and self.name in ["einsiedeln", "salzinnes"]:
+        elif self.encoding_type == "new_gabc" and self.name in ["einsiedeln", "salzinnes", , "PRAIG/Einsiedeln_staffLevel", "PRAIG/Salzinnes_staffLevel"]:
             for split in ds.keys():
                 for y in ds[split][self.TRANSCRIPT]:
                     content = y

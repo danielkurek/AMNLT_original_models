@@ -91,7 +91,7 @@ def preprocess_transcript(transcript, w2i, ds_name, encoding_type="char"):
             tokens.append(temp)
         return torch.tensor([w2i[token] for token in tokens])                
     
-    elif encoding_type == "new_gabc" and ds_name in ["einsiedeln", "salzinnes"]:
+    elif encoding_type == "new_gabc" and ds_name in ["einsiedeln", "salzinnes", "PRAIG/Einsiedeln_staffLevel", "PRAIG/Salzinnes_staffLevel"]:
         tokens = []
         i = 0
         while i < len(transcript):
