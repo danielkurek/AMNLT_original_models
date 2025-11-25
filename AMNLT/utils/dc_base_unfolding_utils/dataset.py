@@ -10,8 +10,8 @@ from torch.utils.data import Dataset
 from datasets import load_dataset
 
 from AMNLT.utils.dc_base_unfolding_utils.data_preprocessing import (
-    preprocess_image_from_file,
-    preprocess_transcript_from_file,
+    preprocess_image,
+    preprocess_transcript,
 )
 
 ################################################################################################ Single-source:
@@ -32,6 +32,7 @@ class CTCDataset(Dataset):
         encoding_type="char",
     ):
         self.name = ds_name
+        self.split = split
         self.model_name = model_name
         self.train = train
         self.da_train = da_train
@@ -74,24 +75,24 @@ class CTCDataset(Dataset):
             reduce = False
 
         # CTC Training setting
-        x = preprocess_image_from_file(self.X[idx], unfolding=unfolding, reduce=reduce)
-        y = preprocess_transcript_from_file(self.Y[idx], self.w2i, self.name, self.encoding_type)
+        x = preprocess_image(self.X[idx], unfolding=unfolding, reduce=reduce)
+        y = preprocess_transcript(self.Y[idx], self.w2i, self.name, self.encoding_type)
         
-        img_path = self.X[idx]
+        img_id = f"{self.split}_{idx}"
         
         if self.train:
             # x.shape = [channels, height, width]
             if self.model_name == "fcn" or self.model_name == "crnnunfolding" or self.model_name == "cnnt2d" or self.model_name == "van":
-                return x, (x.shape[2] // 8) * (x.shape[1] // 32), y, len(y), img_path
+                return x, (x.shape[2] // 8) * (x.shape[1] // 32), y, len(y), img_id
             elif self.model_name == "crnn":
-                return x, x.shape[2] // self.width_reduction, y, len(y), img_path
+                return x, x.shape[2] // self.width_reduction, y, len(y), img_id
             elif self.model_name == "ctc_van":
-                return x, x.shape[2] // 8, y, len(y), img_path
+                return x, x.shape[2] // 8, y, len(y), img_id
             
         if self.printbatch:
             try:
                 # Open the image from the provided path
-                image = Image.open(img_path)
+                image = self.X[img_id]
                 # Save the image to a new location, e.g., as 'output_image.png'
                 image.save("output_image.png")
                 print(f"Image saved as 'output_image.png'")
@@ -107,7 +108,7 @@ class CTCDataset(Dataset):
             # Set printbatch to False after saving
             self.printbatch = False
             
-        return x, y, img_path
+        return x, y, img_id
     
     def get_mx_hw(self):
         
@@ -117,8 +118,8 @@ class CTCDataset(Dataset):
             reduce = True
         
         max_height = max_width = 0
-        for img_path in self.X:
-            x = preprocess_image_from_file(img_path, unfolding=True, reduce=reduce)
+        for img in self.X:
+            x = preprocess_image(img, unfolding=True, reduce=reduce)
             max_height = max(max_height, x.shape[1])
             max_width = max(max_width, x.shape[2])
         return max_height, max_width

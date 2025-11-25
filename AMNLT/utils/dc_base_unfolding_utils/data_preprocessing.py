@@ -19,9 +19,9 @@ toTensor = transforms.ToTensor()
 
 ################################# Image preprocessing:
 
-def preprocess_image_from_file(path, unfolding=False, reduce=False):
-    x = Image.open(path).convert("L")  # Convert to grayscale
-    
+def preprocess_image(img, unfolding=False, reduce=False):
+    x = img.convert("L")
+
     if not unfolding:
         # Not preserving aspect ratio
         #new_width = x.width // 4
@@ -53,77 +53,81 @@ def preprocess_image_from_file(path, unfolding=False, reduce=False):
     #sys.exit()
     return x
 
+def preprocess_image_from_file(path, unfolding=False, reduce=False):
+    img = Image.open(path)
+    preprocess_image(img, unfolding, reduce)
+    
+
 
 ################################# Transcript preprocessing:
 
 def preprocess_transcript_from_file(path, w2i, ds_name, encoding_type="char"):
+    with open(path, "r") as f:
+        return preprocess_transcript(f.read(), w2i, ds_name, encoding_type)
+
+def preprocess_transcript(transcript, w2i, ds_name, encoding_type="char"):
+    transcript = transcript.strip()
     if (encoding_type == "char") or (encoding_type == "new_gabc" and ds_name in ["einsiedeln_lyrics", "salzinnes_lyrics"]):
-        with open(path, "r") as file:
-            y = file.read().strip()
-            return torch.tensor([w2i[c] for c in y])
+        raise NotImplementedError()
+        return torch.tensor([w2i[c] for c in transcript])
         
     elif encoding_type == "new_gabc" and ds_name in ["einsiedeln_music", "salzinnes_music"]:
-        with open(path, "r") as file:
-            content = file.read().strip()
-            tokens = []
-            i = 0
-            temp = ''
-            while i < len(content):
-                if content[i] == " " or content[i] == ")":
-                    if temp:
-                        tokens.append(temp)
-                    tokens.append(content[i])
-                    temp = ''
-                elif content[i] == "(":
-                    tokens.append(content[i])
-                else:
-                    temp += content[i]
-                i += 1
-            if temp:
-                tokens.append(temp)
-            return torch.tensor([w2i[token] for token in tokens])                
-    
-    elif encoding_type == "new_gabc" and ds_name in ["einsiedeln", "salzinnes"]:
-        with open(path, "r") as file:
-            content = file.read().strip()
+        raise NotImplementedError()
         tokens = []
         i = 0
-        while i < len(content):
-            if content[i] == '(':
-                tokens.append(content[i])
+        temp = ''
+        while i < len(transcript):
+            if transcript[i] == " " or transcript[i] == ")":
+                if temp:
+                    tokens.append(temp)
+                tokens.append(transcript[i])
+                temp = ''
+            elif transcript[i] == "(":
+                tokens.append(transcript[i])
+            else:
+                temp += transcript[i]
+            i += 1
+        if temp:
+            tokens.append(temp)
+        return torch.tensor([w2i[token] for token in tokens])                
+    
+    elif encoding_type == "new_gabc" and ds_name in ["einsiedeln", "salzinnes"]:
+        tokens = []
+        i = 0
+        while i < len(transcript):
+            if transcript[i] == '(':
+                tokens.append(transcript[i])
                 i += 1
                 temp = ''
-                while i < len(content) and content[i] != ')':
-                    temp += content[i]
+                while i < len(transcript) and transcript[i] != ')':
+                    temp += transcript[i]
                     i += 1
                 for token in temp.split():
                     tokens.append(token)
-                if i < len(content):
-                    tokens.append(content[i])
+                if i < len(transcript):
+                    tokens.append(transcript[i])
                     i += 1
             else:
-                tokens.append(content[i])
+                tokens.append(transcript[i])
                 i += 1
         return torch.tensor([w2i[token] for token in tokens])
     
     elif encoding_type == "music_aware":
-        with open(path, "r") as file:
-            content = file.read().strip()
-            i = 0
-            tokens = []
-            while i < len(content):
-                #print(content[i:i+3])
-                if content[i:i+3] == "<m>":  # Comprueba si el caracter actual tiene etiqueta musical
-                    # Si es así, extrae el caracter musical con la etiqueta
-                    if i + 3 < len(content):  # Asegura que no se sale del rango
-                        tokens.append("<m>" + content[i+3])
-                        i += 3  # Salta al siguiente caracter después de <m>
-                    else:
-                        break
+        i = 0
+        tokens = []
+        while i < len(transcript):
+            #print(content[i:i+3])
+            if transcript[i:i+3] == "<m>":  # Comprueba si el caracter actual tiene etiqueta musical
+                # Si es así, extrae el caracter musical con la etiqueta
+                if i + 3 < len(transcript):  # Asegura que no se sale del rango
+                    tokens.append("<m>" + transcript[i+3])
+                    i += 3  # Salta al siguiente caracter después de <m>
                 else:
-                    # Añade el caracter normal al vocabulario
-                    tokens.append(content[i])
-                i += 1
+                    break
+            else:
+                # Añade el caracter normal al vocabulario
+                tokens.append(transcript[i])
+            i += 1
         return torch.tensor([w2i[c] for c in tokens])
 
 

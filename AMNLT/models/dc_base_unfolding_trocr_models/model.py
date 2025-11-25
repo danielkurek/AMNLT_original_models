@@ -58,7 +58,7 @@ class CTCTrainedCRNN(LightningModule):
         
         # Threshold for very large losses
         self.losses = []
-        self.img_paths = []
+        self.img_ids = []
         self.threshold = 4
 
     def summary(self):
@@ -70,13 +70,13 @@ class CTCTrainedCRNN(LightningModule):
     def forward(self, x):
         return self.model(x)
     
-    def check_image(self, x, loss, img_path, avg_loss, loss_dir):      
+    def check_image(self, x, loss, img_id, avg_loss, loss_dir):      
         if abs(loss - avg_loss) > self.threshold:
-            loss_path = os.path.join(loss_dir, os.path.basename(img_path))
+            loss_path = os.path.join(loss_dir, img_id)
             x.save(loss_path)
 
     def training_step(self, batch, batch_idx):
-        x, xl, y, yl, img_path = batch
+        x, xl, y, yl, img_id = batch
         x = self.augment(x)
         yhat = self.model(x)
         # ------ CTC Requirements ------
@@ -89,7 +89,7 @@ class CTCTrainedCRNN(LightningModule):
         self.log("train_loss", loss, prog_bar=True, logger=True, on_epoch=True)
         
         self.losses.append(loss.item())
-        self.img_paths.append(img_path[0])
+        self.img_ids.append(img_id[0])
         
         if self.check_train:
             yhat = self.model(x)[0]
@@ -115,9 +115,10 @@ class CTCTrainedCRNN(LightningModule):
             shutil.rmtree(loss_dir)
         os.makedirs(loss_dir, exist_ok=True)
         
-        for loss, img_path in zip(self.losses, self.img_paths):
-            x = Image.open(img_path)
-            self.check_image(x, loss, img_path, avg_loss, loss_dir)
+        # FIXME: we do not have img_paths since we are using huggingface dataset instead of files
+        # for loss, img_path in zip(self.losses, self.img_paths):
+        #     x = Image.open(img_path)
+        #     self.check_image(x, loss, img_path, avg_loss, loss_dir)
 
     def validation_step(self, batch, batch_idx):
         x, y, _ = batch  # batch_size = 1
