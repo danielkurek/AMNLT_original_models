@@ -151,7 +151,7 @@ class CTCTrainedCRNN(LightningModule):
             print(f"Ground truth - {self.Y[index]}")
             print(f"Prediction - {self.YHat[index]}")
             
-        with open(f"predictions_{self.ds_name}.txt", 'w') as f:
+        with open(f"predictions_{self.ds_name.replace("/","-")}.txt", 'w') as f:
             for pred, gt in zip(self.YHat, self.Y):
                 pred_str = ''.join(pred)
                 f.write(f"{pred_str}\n")
@@ -362,7 +362,7 @@ class CTCTrainedTrOCR(LightningModule):
         for k, v in metrics.items():
             self.log(f"val_{k}", v, prog_bar=True)
 
-        with open(f"predictions_{self.ds_name}.txt", 'w') as f:
+        with open(f"predictions_{self.ds_name.replace("/","-")}.txt", 'w') as f:
             for pred in self.YHat:
                 f.write("".join(pred) + "\n")
 
