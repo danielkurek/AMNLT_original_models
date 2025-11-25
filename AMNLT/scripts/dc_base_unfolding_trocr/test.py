@@ -30,7 +30,8 @@ def test(
     project="AMNLT",
     group="Baseline-CharacterLevel",
     entity="el_iseo",
-    ctc="greedy"
+    ctc="greedy",
+    num_workers=2,
 ):
     gc.collect()
     torch.cuda.empty_cache()
@@ -61,7 +62,7 @@ def test(
         mh, mw = 0, 0
         
     test_loader = DataLoader(
-        test_ds, batch_size=1, shuffle=False, num_workers=20
+        test_ds, batch_size=1, shuffle=False, num_workers=num_workers
     )  # prefetch_factor=2
 
     # Model

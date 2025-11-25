@@ -37,7 +37,8 @@ def train(
     entity="el_iseo",
     fine_tune=False,
     pretrain_model_path=None,
-    ctc="greedy"
+    ctc="greedy",
+    num_workers=2
 ):
     gc.collect()
     torch.cuda.empty_cache()
@@ -63,7 +64,7 @@ def train(
         train_ds,
         batch_size=batch_size,
         shuffle=True,
-        num_workers=20,
+        num_workers=num_workers,
         collate_fn=ctc_batch_preparation,
     )  # prefetch_factor=2
     val_ds = CTCDataset(
@@ -74,7 +75,7 @@ def train(
         encoding_type=encoding_type,
     )
     val_loader = DataLoader(
-        val_ds, batch_size=1, shuffle=False, num_workers=20
+        val_ds, batch_size=1, shuffle=False, num_workers=num_workers
     )  # prefetch_factor=2
     test_ds = CTCDataset(
         ds_name=ds_name,
@@ -84,7 +85,7 @@ def train(
         encoding_type=encoding_type,
     )
     test_loader = DataLoader(
-        test_ds, batch_size=1, shuffle=False, num_workers=20
+        test_ds, batch_size=1, shuffle=False, num_workers=num_workers
     )  # prefetch_factor=2
     
     if model_name == "cnnt2d":
