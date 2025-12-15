@@ -277,9 +277,9 @@ def metrics(predictions_file, dataset, dataset_name, n_samples):
     if n_samples == 0 or n_samples > N:
         n_samples = N
     for i in range(n_samples):
-        if dataset in ["solesmes", "gregosynth"]:
+        if dataset_name in ["solesmes", "gregosynth", "PRAIG/Solesmes_staffLevel", "PRAIG/GregoSynth_staffLevel"]:
             x_tokens, y_tokens = tokenization_muaw(dataset["transcription"][i].replace('\n', ' '), predictions_lines[i])
-        elif dataset in ["einsiedeln", "salzinnes"]:
+        elif dataset_name in ["einsiedeln", "salzinnes", "PRAIG/Einsiedeln_staffLevel", "PRAIG/Salzinnes_staffLevel"]:
             x_tokens, y_tokens = tokenization_pseudo(dataset["transcription"][i].replace('\n', ' '), predictions_lines[i])
         sample_bwer = get_bwer(x_tokens, y_tokens)
         sample_amler = jiwer.wer(" ".join(x_tokens), " ".join(y_tokens)) * 100.00
@@ -299,9 +299,9 @@ def metrics(predictions_file, dataset, dataset_name, n_samples):
     total_bwer = 0
     total_amler = 0
     for x, y in zip(y_true, y_pred):
-        if dataset in ["solesmes", "gregosynth"]:
+        if dataset_name in ["solesmes", "gregosynth", "PRAIG/Solesmes_staffLevel", "PRAIG/GregoSynth_staffLevel"]:
             x_tokens, y_tokens = tokenization_muaw(x, y)
-        elif dataset in ["einsiedeln", "salzinnes"]:
+        elif dataset_name in ["einsiedeln", "salzinnes", "PRAIG/Einsiedeln_staffLevel", "PRAIG/Salzinnes_staffLevel"]:
             x_tokens, y_tokens = tokenization_pseudo(x, y)
         total_bwer += get_bwer(x_tokens, y_tokens)
         total_amler += jiwer.wer(" ".join(x_tokens), " ".join(y_tokens)) * 100.00
