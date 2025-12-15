@@ -5,6 +5,8 @@ import jiwer
 import re
 import json
 
+from datasets import load_dataset
+
 # Set to True to save per-sample metrics in JSON
 save_per_sample_metrics = True
 output_json = "per_sample_metrics.json"  # Output filename
@@ -23,29 +25,26 @@ def get_bwer(X, Y, verbose=False):
     diff_count = (abs(len(X) - len(Y)) + diff_count) / (2 * len(X))
     return diff_count * 100.00
 
-def get_mer(gt_files, resultado_final, dataset, verbose=False):
+def get_mer(resultado_final, dataset, dataset_name, verbose=False):
     total_mer = 0.0
     mer_values = []
     random_sample = False
     worst_mer = 0.0
-    for gt_file, result in zip(gt_files, resultado_final):
-        base_name, _ = os.path.splitext(gt_file)
-        if dataset == "solesmes":
-            gt_file = "../data/Repertorium_GT_music/" + base_name + ".gabc"
-        elif dataset == "gregosynth":
-            gt_file = "../data/GT_music/" + base_name + ".gabc"
-        elif dataset == "einsiedeln":
-            gt_file = "../data/Einsiedeln_GT_music/" + base_name + ".gabc"
-        elif dataset == "salzinnes":
-            gt_file = "../data/Salzinnes_GT_music_v2/" + base_name + ".gabc"
-        with open(gt_file.strip(), 'r', encoding='utf-8') as gt_file:
-            gt_text = gt_file.read().replace('\n', ' ')
+    gt_texts = []
+    with open("../GabcParser/out/PRAIG-Einsiedeln_staffLevel/test_music.csv") as f:
+        # TODO: generalize
+        reader = csv.reader(f)
+        rows = iter(reader)
+        # next(rows) # skip header
+        for row in rows:
+            gt_texts.append(row[1])
+        gt_text = gt_text.replace('\n', ' ')
         gt_text = gt_text.replace('(', ' ').replace(')', ' ')
         gt_text = ' '.join(gt_text.split())
         result = ' '.join(result.split())
-        if dataset in ["solesmes", "gregosynth"]:
+        if dataset_name in ["solesmes", "gregosynth", "PRAIG/Solesmes_staffLevel", "PRAIG/GregoSynth_staffLevel"]:
             mer = jiwer.cer(gt_text, result)
-        elif dataset in ["einsiedeln", "salzinnes"]:
+        elif dataset_name in ["einsiedeln", "salzinnes", "PRAIG/Einsiedeln_staffLevel", "PRAIG/Salzinnes_staffLevel"]:
             mer = jiwer.wer(gt_text, result)
         total_mer += mer
         mer_values.append(mer * 100.00)
@@ -66,7 +65,7 @@ def get_mer(gt_files, resultado_final, dataset, verbose=False):
         print("Worst MER:" + str(worst_mer))
         print("\tGT: " + str(worst_gt))
         print("\tPrediction: " + str(worst_result) + "\n")
-    mean_mer = (total_mer / len(gt_files)) * 100.00
+    mean_mer = (total_mer / len(dataset)) * 100.00
     
     # Calculate standard deviation
     mean_mer2 = sum(mer_values) / len(mer_values)
@@ -81,24 +80,15 @@ def get_mer(gt_files, resultado_final, dataset, verbose=False):
     
     return mean_mer
 
-def get_cer_syler(gt_files, resultado_final, dataset, verbose=False):
+def get_cer_syler(resultado_final, dataset, verbose=False):
     total_cer = 0.0
     total_syler = 0.0
     cer_values = []
     random_sample = False
     worst_cer = 0.0
-    for gt_file, result in zip(gt_files, resultado_final):
-        base_name, _ = os.path.splitext(gt_file)
-        if dataset == "solesmes":
-            gt_file = "../data/Repertorium_GT_lyrics/" + base_name + ".gabc"
-        elif dataset == "gregosynth":
-            gt_file = "../data/GT_lyrics/" + base_name + ".gabc"
-        elif dataset == "einsiedeln":
-            gt_file = "../data/Einsiedeln_GT_lyrics/" + base_name + ".gabc"
-        elif dataset == "salzinnes":
-            gt_file = "../data/Salzinnes_GT_lyrics_v2/" + base_name + ".gabc"
-        with open(gt_file.strip(), 'r', encoding='utf-8') as gt_file:
-            gt_text = gt_file.read().replace('\n', ' ')
+    for gt_text, result in zip(dataset["transcription"], resultado_final):
+        #TODO: filter gt_text to keep only lyrics
+        gt_text = gt_text.replace('\n', ' ')
         gt_text = ' '.join(gt_text.split())
         result = ' '.join(result.split())
         cer = jiwer.cer(gt_text, result)
@@ -122,12 +112,12 @@ def get_cer_syler(gt_files, resultado_final, dataset, verbose=False):
         print("Worst CER:" + str(worst_cer))
         print("\tGT: " + str(worst_gt))
         print("\tPrediction: " + str(worst_result) + "\n")
-    mean_cer = (total_cer / len(gt_files)) * 100.00
-    mean_syler = (total_syler / len(gt_files)) * 100.00
+    mean_cer = (total_cer / len(dataset)) * 100.00
+    mean_syler = (total_syler / len(dataset)) * 100.00
     return mean_cer, mean_syler
 
-def extract_music_lyrics_solesmes_gregosynth_muaw(archivo_transcripcion, gt_file, dataset):
-    with open(archivo_transcripcion, 'r', encoding='utf-8') as transcripts_file:
+def extract_music_lyrics_solesmes_gregosynth_muaw(predictions_file, dataset, dataset_name):
+    with open(predictions_file, 'r', encoding='utf-8') as transcripts_file:
         transcripts_lines = transcripts_file.readlines()
     resultado_final_music = []
     resultado_final_lyrics = []
@@ -153,20 +143,18 @@ def extract_music_lyrics_solesmes_gregosynth_muaw(archivo_transcripcion, gt_file
         without_m_string = re.sub(r'\s+', ' ', without_m_string)
         resultado_final_music.append(with_m_string)
         resultado_final_lyrics.append(without_m_string)
-    with open(gt_file, 'r', encoding='utf-8') as gt_file:
-        gt_files = gt_file.readlines()
-    mer = get_mer(gt_files, resultado_final_music, dataset)
-    cer, syler = get_cer_syler(gt_files, resultado_final_lyrics, dataset)
+    mer = get_mer(resultado_final_music, dataset, dataset_name)
+    cer, syler = get_cer_syler(resultado_final_lyrics, dataset)
     return mer, cer, syler
 
-def extract_music_lyrics_einsiedeln_salzinnes(archivo_transcripcion, gt_file, dataset):
-    with open(archivo_transcripcion, 'r', encoding='utf-8') as transcripts_file:
+def extract_music_lyrics_einsiedeln_salzinnes(predictions_file, dataset, dataset_name):
+    with open(predictions_file, 'r', encoding='utf-8') as transcripts_file:
         transcripts_lines = transcripts_file.readlines()
     resultado_final_music = []
     resultado_final_lyrics = []
-    if dataset == "einsiedeln":
-        music_vocab = "../data/einsiedeln_music/vocab/w2i_new_gabc.json"
-    elif dataset == "salzinnes":
+    # TODO: fix vocab paths
+    if dataset_name in ["einsiedeln", "PRAIG/Einsiedeln_staffLevel"]:
+    elif dataset_name in ["salzinnes", "PRAIG/Salzinnes_staffLevel"]:
         music_vocab = "../data/salzinnes_music/vocab/w2i_new_gabc.json"
     with open(music_vocab, 'r', encoding='utf-8') as vocab_file:
         music_vocab = json.load(vocab_file)
@@ -197,10 +185,8 @@ def extract_music_lyrics_einsiedeln_salzinnes(archivo_transcripcion, gt_file, da
             else:
                 i += 1
         resultado_final_music.append(" ".join(transcript_music).replace("(", "").replace(")", ""))
-    with open(gt_file, 'r', encoding='utf-8') as gt_file:
-        gt_files = gt_file.readlines()
-    mer = get_mer(gt_files, resultado_final_music, dataset)
-    cer, syler = get_cer_syler(gt_files, resultado_final_lyrics, dataset)
+    mer = get_mer(resultado_final_music, dataset, dataset_name)
+    cer, syler = get_cer_syler(resultado_final_lyrics, dataset)
     return mer, cer, syler
 
 def tokenization_muaw(X, Y):
@@ -241,9 +227,9 @@ def tokenization_muaw(X, Y):
     return words_X, words_Y
 
 def tokenization_pseudo(X, Y):
-    if dataset == "einsiedeln":
+    if dataset_name in ["einsiedeln", "PRAIG/Einsiedeln_staffLevel"]:
         music_vocab = "../data/einsiedeln_music/vocab/w2i_new_gabc.json"
-    elif dataset == "salzinnes":
+    elif dataset_name in ["salzinnes", "PRAIG/Salzinnes_staffLevel"]:
         music_vocab = "../data/salzinnes_music/vocab/w2i_new_gabc.json"
     with open(music_vocab, 'r', encoding='utf-8') as vocab_file:
         music_vocab = json.load(vocab_file)
@@ -277,47 +263,31 @@ def extract_vocab(sorted_music_vocab, transcript):
             i += 1
     return words
 
-def metrics(transcript, gt_file, dataset, n_samples):
-    if dataset in ["solesmes", "gregosynth"]:
-        mer, cer, syler = extract_music_lyrics_solesmes_gregosynth_muaw(transcript, gt_file, dataset)
-    elif dataset in ["einsiedeln", "salzinnes"]:
-        mer, cer, syler = extract_music_lyrics_einsiedeln_salzinnes(transcript, gt_file, dataset)
-    with open(transcript, 'r', encoding='utf-8') as transcript_file:
-        transcript_lines = transcript_file.readlines()
-    with open(gt_file, 'r', encoding='utf-8') as gt_file:
-        gt_files = gt_file.readlines()
-    gt_texts = []
-    for gt_file in gt_files:
-        base_name, _ = os.path.splitext(gt_file)
-        if dataset == "solesmes":
-            gt_file_path = "../data/Repertorium_GT_full/" + base_name + ".gabc"
-        elif dataset == "gregosynth":
-            gt_file_path = "../data/GT/" + base_name + ".gabc"
-        elif dataset == "einsiedeln":
-            gt_file_path = "../data/Einsiedeln_GT/" + base_name + ".gabc"
-        elif dataset == "salzinnes":
-            gt_file_path = "../data/Salzinnes_GT_v2/" + base_name + ".gabc"
-        with open(gt_file_path.strip(), 'r', encoding='utf-8') as gt_file_inner:
-            gt_file = gt_file_inner.read().replace('\n', ' ')
-            gt_texts.append(gt_file)
-    y_true = ["".join(s) for s in gt_texts]
-    y_pred = ["".join(s) for s in transcript_lines]
+def metrics(predictions_file, dataset, dataset_name, n_samples):
+    if dataset_name in ["solesmes", "gregosynth", "PRAIG/Solesmes_staffLevel", "PRAIG/GregoSynth_staffLevel"]:
+        mer, cer, syler = extract_music_lyrics_solesmes_gregosynth_muaw(predictions_file, dataset, dataset_name)
+    elif dataset_name in ["einsiedeln", "salzinnes", "PRAIG/Einsiedeln_staffLevel", "PRAIG/Salzinnes_staffLevel"]:
+        mer, cer, syler = extract_music_lyrics_einsiedeln_salzinnes(predictions_file, dataset, dataset_name)
+    with open(predictions_file, 'r', encoding='utf-8') as transcript_file:
+        predictions_lines = transcript_file.readlines()
+    y_true = ["".join(s.replace('\n', ' ')) for s in dataset["transcription"]]
+    y_pred = ["".join(s) for s in predictions_lines]
     per_sample = []
     N = len(y_true)
     if n_samples == 0 or n_samples > N:
         n_samples = N
     for i in range(n_samples):
         if dataset in ["solesmes", "gregosynth"]:
-            x_tokens, y_tokens = tokenization_muaw(gt_texts[i], transcript_lines[i])
+            x_tokens, y_tokens = tokenization_muaw(dataset["transcription"][i].replace('\n', ' '), predictions_lines[i])
         elif dataset in ["einsiedeln", "salzinnes"]:
-            x_tokens, y_tokens = tokenization_pseudo(gt_texts[i], transcript_lines[i])
+            x_tokens, y_tokens = tokenization_pseudo(dataset["transcription"][i].replace('\n', ' '), predictions_lines[i])
         sample_bwer = get_bwer(x_tokens, y_tokens)
         sample_amler = jiwer.wer(" ".join(x_tokens), " ".join(y_tokens)) * 100.00
         sample_aler = (sample_amler - sample_bwer) / sample_amler if sample_amler > 0 else 0
         per_sample.append({
-            "file": gt_files[i].strip(),
-            "gt": gt_texts[i],
-            "pred": transcript_lines[i],
+            "index": i,
+            "gt": dataset["transcription"][i],
+            "pred": predictions_lines[i],
             "bwer": sample_bwer,
             "amler": sample_amler,
             "aler": sample_aler
@@ -346,38 +316,16 @@ def metrics(transcript, gt_file, dataset, n_samples):
     print(f"\tBWER: {round(bwer, 2)}")
 
 if __name__ == "__main__":
-    test = False
-    dataset = "einsiedeln"
-    model = "dan"
+    split = "test"
+    dataset_name = "PRAIG/Einsiedeln_staffLevel"
+    model = "crnn"
     dc = False
     alignment = "tm_grouped"
     n_samples = 0  # set to 0 for all, or any number for partial output
 
     if dc:
-        if dataset == "salzinnes":
-            transcript_file = f"salzinnes/predictions_salzinnes_{alignment}_aligned.txt"
-            gt_file = "../data/Salzinnes_Folds/test_gt_fold.dat"
-        elif dataset == "einsiedeln":
-            transcript_file = f"einsiedeln/predictions_einsiedeln_{alignment}_aligned.txt"
-            gt_file = "../data/Einsiedeln_Folds/test_gt_fold.dat"
-        elif dataset == "gregosynth":
-            transcript_file = f"gregosynth/predictions_gregosynth_{alignment}_aligned.txt"
-            gt_file = "../data/Folds/test_gt_fold.dat"
-        elif dataset == "solesmes":
-            transcript_file = f"solesmes/predictions_solesmes_{alignment}_aligned.txt"
-            gt_file = "../data/Repertorium_Folds/test_gt_fold.dat"
+        raise NotImplementedError()
     else:
-        if dataset == "solesmes":
-            transcript_file = "solesmes/predictions_solesmes_" + model + "_music_aware.txt"
-            gt_file = "../data/Repertorium_Folds/test_gt_fold.dat"
-        elif dataset == "gregosynth":
-            transcript_file = "gregosynth/predictions_gregosynth_" + model + "_music_aware.txt"
-            gt_file = "../data/Folds/test_gt_fold.dat"
-        elif dataset == "einsiedeln":
-            transcript_file = "einsiedeln/predictions_einsiedeln_" + model + ".txt"
-            gt_file = "../data/Einsiedeln_Folds/test_gt_fold.dat"
-        elif dataset == "salzinnes":
-            transcript_file = "salzinnes/predictions_salzinnes_" + model + ".txt"
-            gt_file = "../data/Salzinnes_Folds/test_gt_fold.dat"
-
-    metrics(transcript_file, gt_file, dataset, n_samples)
+        predictions_file = f"predictions_{dataset_name.replace('/','-')}.txt"
+    ds = load_dataset(dataset_name, split=split)
+    metrics(predictions_file, ds, dataset_name, n_samples)
