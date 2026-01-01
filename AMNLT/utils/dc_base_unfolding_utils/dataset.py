@@ -19,6 +19,7 @@ from gabcparser.utils import separate_lyrics_music
 import gabcparser.grammars as grammars
 
 from enum import Enum
+import functools
 
 ################################################################################################ Single-source:
 
@@ -26,6 +27,10 @@ class Separation(Enum):
     NONE = None
     LYRIC = "lyric"
     MUSIC = "music"
+
+def dataset_separation(example, parser):
+    lyric, music = separate_lyrics_music.separate_lyrics_music(example["transcription"], parser)
+    return {"transcription_lyric": lyric, "transcription_music": music}
 
 # ds_name = name of HuggingFace dataset
 # encoding_type = ["char", "new_gabc", "music_aware"]
@@ -46,18 +51,8 @@ def make_vocabulary(ds_name, encoding_type, transcription_separation: Separation
         
             parser = GabcParser.load_parser(gabc_variation)
 
-            error_indices = []
-            for split in ds.keys():
-                ds[split]["transcription_lyric"] = []
-                ds[split]["transcription_music"] = []
-                for i,transcript in enumerate(ds[split]["transcription"]):
-                    lyric, music = separate_lyrics_music.separate_lyrics_music(transcript, parser)
-                    if lyric is None or music is None:
-                        error_indices.append(i)
-                    ds[split]["transcription_lyric"] = [].append(lyric)
-                    ds[split]["transcription_music"] = [].append(music)
-            if len(error_indices) > 0:
-                print(f"Could not separate lyrics and musics for the following samples: {error_indices}")
+            ds = ds.map(functools.partial(dataset_separation, parser=parser), num_proc=8)
+            print(f"{ds["train"].column_names=}")
 
         key = CTCDataset.TRANSCRIPT
         if transcription_separation == Separation.LYRIC:

@@ -4,6 +4,7 @@ import sys
 import jiwer
 import re
 import json
+import functools
 
 from datasets import load_dataset
 from gabcparser import GabcParser
@@ -247,9 +248,11 @@ def extract_vocab(sorted_music_vocab, transcript):
             i += 1
     return words
 
+def dataset_separation(example, parser):
+    lyric, music = separate_lyrics_music.separate_lyrics_music(example["transcription"], parser)
+    return {"transcription_lyric": lyric, "transcription_music": music}
+
 def generate_separated_transcriptions(dataset, dataset_name, gabc_variation = None):
-    lyric_transcriptions = []
-    music_transcriptions = []
     if gabc_variation is None:
         if dataset_name in ["gregosynth", "PRAIG/GregoSynth_staffLevel"]:
             gabc_variation = grammars.GABC
@@ -262,24 +265,21 @@ def generate_separated_transcriptions(dataset, dataset_name, gabc_variation = No
     
     parser = GabcParser.load_parser(gabc_variation)
 
+    new_dataset = dataset.map(functools.partial(dataset_separation, parser=parser))
+
     error_indices = []
-    for i,transcript in enumerate(dataset["transcription"]):
-        lyric, music = separate_lyrics_music.separate_lyrics_music(transcript, parser)
-        if lyric is None or music is None:
+    for i,example in enumerate(new_dataset):
+        if example["transcription_lyric"] is None or example["transcription_music"] is None:
             error_indices.append(i)
-        lyric_transcriptions.append(lyric)
-        music_transcriptions.append(music)
-    return error_indices, (lyric_transcriptions, music_transcriptions)
+    return error_indices, new_dataset
 
 def metrics(predictions_file, dataset, dataset_name, n_samples):
     sorted_music_vocab = None
     if dataset_name in ["einsiedeln", "salzinnes", "PRAIG/Einsiedeln_staffLevel", "PRAIG/Salzinnes_staffLevel"]:
-        error_indices, (lyric_transcriptions, music_transcriptions) = generate_separated_transcriptions(dataset, dataset_name)
+        error_indices, dataset = generate_separated_transcriptions(dataset, dataset_name)
         if len(error_indices) > 0:
             print(f"Could not separate lyrics and musics for the following samples: {error_indices}")
             print("THESE RESULTS ARE THEREFORE INVALID UNTIL THE ERROR IS CORRECTED")
-            dataset["transcription_lyric"] = [x if x is not None else "" for x in lyric_transcriptions]
-            dataset["transcription_music"] = [x if x is not None else "" for x in music_transcriptions]
         # Consider adding caching for the vocabulary
         music_vocab, _ = make_vocabulary(dataset_name, "new_gabc", Separation.MUSIC)
         sorted_music_vocab = sorted(music_vocab.keys(), key=len, reverse=True)
