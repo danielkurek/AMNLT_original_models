@@ -86,7 +86,7 @@ def make_vocabulary(ds_name, encoding_type, transcription_separation: Separation
                             # Add the normal character to the vocabulary
                             vocab.add(content[i])
                         i += 1
-        elif encoding_type == "new_gabc" and ds_name in ["PRAIG/Einsiedeln_staffLevel", "PRAIG/Salzinnes_staffLevel"]:
+        elif encoding_type == "new_gabc" and ds_name in ["PRAIG/Einsiedeln_staffLevel", "PRAIG/Salzinnes_staffLevel"] and transcription_separation == Separation.NONE:
             for split in ds.keys():
                 for y in ds[split][CTCDataset.TRANSCRIPT]:
                     content = y
