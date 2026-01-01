@@ -9,6 +9,7 @@ from datasets import load_dataset
 from gabcparser import GabcParser
 from gabcparser.utils import separate_lyrics_music
 import gabcparser.grammars as grammars
+from AMNLT.utils.dc_base_unfolding_utils.dataset import make_vocabulary, Separation
 
 # Set to True to save per-sample metrics in JSON
 save_per_sample_metrics = True
@@ -144,18 +145,11 @@ def extract_music_lyrics_solesmes_gregosynth_muaw(predictions_file, dataset, dat
     cer, syler = get_cer_syler(resultado_final_lyrics, dataset)
     return mer, cer, syler
 
-def extract_music_lyrics_einsiedeln_salzinnes(predictions_file, dataset, dataset_name):
+def extract_music_lyrics_einsiedeln_salzinnes(predictions_file, dataset, dataset_name, sorted_music_vocab):
     with open(predictions_file, 'r', encoding='utf-8') as transcripts_file:
         transcripts_lines = transcripts_file.readlines()
     resultado_final_music = []
     resultado_final_lyrics = []
-    # TODO: fix vocab paths
-    if dataset_name in ["einsiedeln", "PRAIG/Einsiedeln_staffLevel"]:
-    elif dataset_name in ["salzinnes", "PRAIG/Salzinnes_staffLevel"]:
-        music_vocab = "../data/salzinnes_music/vocab/w2i_new_gabc.json"
-    with open(music_vocab, 'r', encoding='utf-8') as vocab_file:
-        music_vocab = json.load(vocab_file)
-        sorted_music_vocab = sorted(music_vocab.keys(), key=len, reverse=True)
     for transcript in transcripts_lines:
         found_music_tokens = []
         transcript_copy = transcript
@@ -223,14 +217,7 @@ def tokenization_muaw(X, Y):
         i += 1
     return words_X, words_Y
 
-def tokenization_pseudo(X, Y):
-    if dataset_name in ["einsiedeln", "PRAIG/Einsiedeln_staffLevel"]:
-        music_vocab = "../data/einsiedeln_music/vocab/w2i_new_gabc.json"
-    elif dataset_name in ["salzinnes", "PRAIG/Salzinnes_staffLevel"]:
-        music_vocab = "../data/salzinnes_music/vocab/w2i_new_gabc.json"
-    with open(music_vocab, 'r', encoding='utf-8') as vocab_file:
-        music_vocab = json.load(vocab_file)
-        sorted_music_vocab = sorted(music_vocab.keys(), key=len, reverse=True)
+def tokenization_pseudo(X, Y, sorted_music_vocab):
     X = X.replace(" ", "")
     Y = Y.replace(" ", "")
     words_X = extract_vocab(sorted_music_vocab, X)
@@ -285,6 +272,7 @@ def generate_separated_transcriptions(dataset, dataset_name, gabc_variation = No
     return error_indices, (lyric_transcriptions, music_transcriptions)
 
 def metrics(predictions_file, dataset, dataset_name, n_samples):
+    sorted_music_vocab = None
     if dataset_name in ["einsiedeln", "salzinnes", "PRAIG/Einsiedeln_staffLevel", "PRAIG/Salzinnes_staffLevel"]:
         error_indices, (lyric_transcriptions, music_transcriptions) = generate_separated_transcriptions(dataset, dataset_name)
         if len(error_indices) > 0:
@@ -292,11 +280,14 @@ def metrics(predictions_file, dataset, dataset_name, n_samples):
             print("THESE RESULTS ARE THEREFORE INVALID UNTIL THE ERROR IS CORRECTED")
             dataset["transcription_lyric"] = [x if x is not None else "" for x in lyric_transcriptions]
             dataset["transcription_music"] = [x if x is not None else "" for x in music_transcriptions]
+        # Consider adding caching for the vocabulary
+        music_vocab, _ = make_vocabulary(dataset_name, "new_gabc", Separation.MUSIC)
+        sorted_music_vocab = sorted(music_vocab.keys(), key=len, reverse=True)
     
     if dataset_name in ["solesmes", "gregosynth", "PRAIG/Solesmes_staffLevel", "PRAIG/GregoSynth_staffLevel"]:
         mer, cer, syler = extract_music_lyrics_solesmes_gregosynth_muaw(predictions_file, dataset, dataset_name)
     elif dataset_name in ["einsiedeln", "salzinnes", "PRAIG/Einsiedeln_staffLevel", "PRAIG/Salzinnes_staffLevel"]:
-        mer, cer, syler = extract_music_lyrics_einsiedeln_salzinnes(predictions_file, dataset, dataset_name)
+        mer, cer, syler = extract_music_lyrics_einsiedeln_salzinnes(predictions_file, dataset, dataset_name, sorted_music_vocab)
     with open(predictions_file, 'r', encoding='utf-8') as transcript_file:
         predictions_lines = transcript_file.readlines()
     y_true = ["".join(s.replace('\n', ' ')) for s in dataset["transcription"]]
@@ -309,7 +300,7 @@ def metrics(predictions_file, dataset, dataset_name, n_samples):
         if dataset_name in ["solesmes", "gregosynth", "PRAIG/Solesmes_staffLevel", "PRAIG/GregoSynth_staffLevel"]:
             x_tokens, y_tokens = tokenization_muaw(dataset["transcription"][i].replace('\n', ' '), predictions_lines[i])
         elif dataset_name in ["einsiedeln", "salzinnes", "PRAIG/Einsiedeln_staffLevel", "PRAIG/Salzinnes_staffLevel"]:
-            x_tokens, y_tokens = tokenization_pseudo(dataset["transcription"][i].replace('\n', ' '), predictions_lines[i])
+            x_tokens, y_tokens = tokenization_pseudo(dataset["transcription"][i].replace('\n', ' '), predictions_lines[i], sorted_music_vocab)
         sample_bwer = get_bwer(x_tokens, y_tokens)
         sample_amler = jiwer.wer(" ".join(x_tokens), " ".join(y_tokens)) * 100.00
         sample_aler = (sample_amler - sample_bwer) / sample_amler if sample_amler > 0 else 0
@@ -331,7 +322,7 @@ def metrics(predictions_file, dataset, dataset_name, n_samples):
         if dataset_name in ["solesmes", "gregosynth", "PRAIG/Solesmes_staffLevel", "PRAIG/GregoSynth_staffLevel"]:
             x_tokens, y_tokens = tokenization_muaw(x, y)
         elif dataset_name in ["einsiedeln", "salzinnes", "PRAIG/Einsiedeln_staffLevel", "PRAIG/Salzinnes_staffLevel"]:
-            x_tokens, y_tokens = tokenization_pseudo(x, y)
+            x_tokens, y_tokens = tokenization_pseudo(x, y, sorted_music_vocab)
         total_bwer += get_bwer(x_tokens, y_tokens)
         total_amler += jiwer.wer(" ".join(x_tokens), " ".join(y_tokens)) * 100.00
     bwer = total_bwer / len(y_true)
