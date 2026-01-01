@@ -50,7 +50,8 @@ dependencies = [
     "torchvision",
     "transformers",
     "visualizer",
-    "wandb>=0.12.10"
+    "wandb>=0.12.10",
+    "gabcparser @ git+https://github.com/danielkurek/GabcParser"
 ]
 classifiers = [
     "Private :: Do Not Upload"

@@ -6,6 +6,9 @@ import re
 import json
 
 from datasets import load_dataset
+from gabcparser import GabcParser
+from gabcparser.utils import separate_lyrics_music
+import gabcparser.grammars as grammars
 
 # Set to True to save per-sample metrics in JSON
 save_per_sample_metrics = True
@@ -30,14 +33,7 @@ def get_mer(resultado_final, dataset, dataset_name, verbose=False):
     mer_values = []
     random_sample = False
     worst_mer = 0.0
-    gt_texts = []
-    with open("../GabcParser/out/PRAIG-Einsiedeln_staffLevel/test_music.csv") as f:
-        # TODO: generalize
-        reader = csv.reader(f)
-        rows = iter(reader)
-        # next(rows) # skip header
-        for row in rows:
-            gt_texts.append(row[1])
+    for i,(gt_text, result) in enumerate(zip(dataset["transcription_music"], resultado_final)):
         gt_text = gt_text.replace('\n', ' ')
         gt_text = gt_text.replace('(', ' ').replace(')', ' ')
         gt_text = ' '.join(gt_text.split())
@@ -46,6 +42,8 @@ def get_mer(resultado_final, dataset, dataset_name, verbose=False):
             mer = jiwer.cer(gt_text, result)
         elif dataset_name in ["einsiedeln", "salzinnes", "PRAIG/Einsiedeln_staffLevel", "PRAIG/Salzinnes_staffLevel"]:
             mer = jiwer.wer(gt_text, result)
+        else:
+            raise NotImplementedError("Unknown dataset name")
         total_mer += mer
         mer_values.append(mer * 100.00)
         
@@ -86,8 +84,7 @@ def get_cer_syler(resultado_final, dataset, verbose=False):
     cer_values = []
     random_sample = False
     worst_cer = 0.0
-    for gt_text, result in zip(dataset["transcription"], resultado_final):
-        #TODO: filter gt_text to keep only lyrics
+    for gt_text, result in zip(dataset["transcription_lyric"], resultado_final):
         gt_text = gt_text.replace('\n', ' ')
         gt_text = ' '.join(gt_text.split())
         result = ' '.join(result.split())
@@ -263,7 +260,39 @@ def extract_vocab(sorted_music_vocab, transcript):
             i += 1
     return words
 
+def generate_separated_transcriptions(dataset, dataset_name, gabc_variation = None):
+    lyric_transcriptions = []
+    music_transcriptions = []
+    if gabc_variation is None:
+        if dataset_name in ["gregosynth", "PRAIG/GregoSynth_staffLevel"]:
+            gabc_variation = grammars.GABC
+        elif dataset_name in ["solesmes", "PRAIG/Solesmes_staffLevel"]:
+            gabc_variation = grammars.S_GABC
+        elif dataset_name in ["einsiedeln", "salzinnes", "PRAIG/Einsiedeln_staffLevel", "PRAIG/Salzinnes_staffLevel"]:
+            gabc_variation = grammars.MEI_GABC
+        else:
+            raise ValueError(f"Could not infer gabc variation for the unknown dataset '{dataset_name}'")
+    
+    parser = GabcParser.load_parser(gabc_variation)
+
+    error_indices = []
+    for i,transcript in enumerate(dataset["transcription"]):
+        lyric, music = separate_lyrics_music.separate_lyrics_music(transcript, parser)
+        if lyric is None or music is None:
+            error_indices.append(i)
+        lyric_transcriptions.append(lyric)
+        music_transcriptions.append(music)
+    return error_indices, (lyric_transcriptions, music_transcriptions)
+
 def metrics(predictions_file, dataset, dataset_name, n_samples):
+    if dataset_name in ["einsiedeln", "salzinnes", "PRAIG/Einsiedeln_staffLevel", "PRAIG/Salzinnes_staffLevel"]:
+        error_indices, (lyric_transcriptions, music_transcriptions) = generate_separated_transcriptions(dataset, dataset_name)
+        if len(error_indices) > 0:
+            print(f"Could not separate lyrics and musics for the following samples: {error_indices}")
+            print("THESE RESULTS ARE THEREFORE INVALID UNTIL THE ERROR IS CORRECTED")
+            dataset["transcription_lyric"] = [x if x is not None else "" for x in lyric_transcriptions]
+            dataset["transcription_music"] = [x if x is not None else "" for x in music_transcriptions]
+    
     if dataset_name in ["solesmes", "gregosynth", "PRAIG/Solesmes_staffLevel", "PRAIG/GregoSynth_staffLevel"]:
         mer, cer, syler = extract_music_lyrics_solesmes_gregosynth_muaw(predictions_file, dataset, dataset_name)
     elif dataset_name in ["einsiedeln", "salzinnes", "PRAIG/Einsiedeln_staffLevel", "PRAIG/Salzinnes_staffLevel"]:
