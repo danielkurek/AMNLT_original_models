@@ -28,7 +28,7 @@ def train(
     model_name,
     encoding_type="char",
     epochs=1000,
-    patience=20,
+    patience=5,
     batch_size=16,   # Change to 16 if using CRNN with post-processing or 1 if using FCN (space-issue in graphics card)
     use_augmentations=True,
     metric_to_monitor="val_cer",
@@ -159,7 +159,7 @@ def train(
         callbacks=callbacks,
         max_epochs=epochs,
         check_val_every_n_epoch=1,
-        deterministic=False,  # If True, raises error saying that CTC loss does not have this behaviour
+        deterministic=True,  # If True, raises error saying that CTC loss does not have this behaviour
         benchmark=False,
         precision="16-mixed",  # Mixed precision training
         fast_dev_run=False,  # Set to True to check if everything is working
