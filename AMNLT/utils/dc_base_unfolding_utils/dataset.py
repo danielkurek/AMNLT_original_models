@@ -52,7 +52,6 @@ def make_vocabulary(ds_name, encoding_type, transcription_separation: Separation
             parser = GabcParser.load_parser(gabc_variation)
 
             ds = ds.map(functools.partial(dataset_separation, parser=parser), num_proc=8)
-            print(f"{ds["train"].column_names=}")
 
         key = CTCDataset.TRANSCRIPT
         if transcription_separation == Separation.LYRIC:
@@ -116,7 +115,10 @@ def make_vocabulary(ds_name, encoding_type, transcription_separation: Separation
         elif encoding_type == "new_gabc" and ds_name in ["PRAIG/Einsiedeln_staffLevel", "PRAIG/Salzinnes_staffLevel"] and transcription_separation == Separation.MUSIC:
             for split in ds.keys():
                 for y in ds[split][key]:
-                    content = y.strip()
+                    content = y.strip().replace("(", " ").replace(")", " ").replace("|", " | ").replace("z", " z")
+                    # print(f"{y=}\n{content=}")
+                    vocab.add("(")
+                    vocab.add(")")
                     i = 0
                     temp = ''
                     while i < len(content):
