@@ -37,7 +37,7 @@ class CTCTrainedCRNN(LightningModule):
         # Loss
         self.ctc = ctc
         self.compute_ctc_loss = CTCLoss(
-            blank=len(self.w2i), zero_infinity=False
+            blank=len(self.w2i), zero_infinity=True
         )  # The target index cannot be blank!
         # Predictions
         self.Y = []
