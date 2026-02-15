@@ -29,7 +29,7 @@ class Separation(Enum):
     MUSIC = "music"
 
 def dataset_separation(example, parser):
-    lyric, music = separate_lyrics_music.separate_lyrics_music(example["transcription"], parser)
+    lyric, music = separate_lyrics_music.separate_lyrics_music(example["transcription"], parser, filtered_symbol=" ")
     return {"transcription_lyric": lyric, "transcription_music": music}
 
 # ds_name = name of HuggingFace dataset

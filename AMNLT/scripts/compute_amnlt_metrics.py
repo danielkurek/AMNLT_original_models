@@ -249,7 +249,7 @@ def extract_vocab(sorted_music_vocab, transcript):
     return words
 
 def dataset_separation(example, parser):
-    lyric, music = separate_lyrics_music.separate_lyrics_music(example["transcription"], parser)
+    lyric, music = separate_lyrics_music.separate_lyrics_music(example["transcription"], parser, filtered_symbol=" ")
     return {"transcription_lyric": lyric, "transcription_music": music}
 
 def generate_separated_transcriptions(dataset, dataset_name, gabc_variation = None):
