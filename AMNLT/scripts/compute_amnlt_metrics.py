@@ -275,11 +275,11 @@ def generate_separated_transcriptions(dataset, dataset_name, gabc_variation = No
 
 def metrics(predictions_file, dataset, dataset_name, n_samples):
     sorted_music_vocab = None
+    error_indices, dataset = generate_separated_transcriptions(dataset, dataset_name)
+    if len(error_indices) > 0:
+        print(f"Could not separate lyrics and musics for the following samples: {error_indices}")
+        print("THESE RESULTS ARE THEREFORE INVALID UNTIL THE ERROR IS CORRECTED")
     if dataset_name in ["einsiedeln", "salzinnes", "PRAIG/Einsiedeln_staffLevel", "PRAIG/Salzinnes_staffLevel"]:
-        error_indices, dataset = generate_separated_transcriptions(dataset, dataset_name)
-        if len(error_indices) > 0:
-            print(f"Could not separate lyrics and musics for the following samples: {error_indices}")
-            print("THESE RESULTS ARE THEREFORE INVALID UNTIL THE ERROR IS CORRECTED")
         # Consider adding caching for the vocabulary
         music_vocab, _ = make_vocabulary(dataset_name, "new_gabc", Separation.MUSIC)
         sorted_music_vocab = sorted(music_vocab.keys(), key=len, reverse=True)
