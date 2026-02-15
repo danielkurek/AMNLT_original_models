@@ -28,7 +28,7 @@ def train(
     model_name,
     encoding_type="char",
     epochs=1000,
-    patience=20,
+    patience=5,
     batch_size=16,   # Change to 16 if using CRNN with post-processing or 1 if using FCN (space-issue in graphics card)
     use_augmentations=True,
     metric_to_monitor="val_cer",
