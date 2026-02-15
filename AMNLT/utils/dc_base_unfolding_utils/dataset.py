@@ -52,7 +52,6 @@ def make_vocabulary(ds_name, encoding_type, transcription_separation: Separation
             parser = GabcParser.load_parser(gabc_variation)
 
             ds = ds.map(functools.partial(dataset_separation, parser=parser), num_proc=8)
-            print(f"{ds["train"].column_names=}")
 
         key = CTCDataset.TRANSCRIPT
         if transcription_separation == Separation.LYRIC:
