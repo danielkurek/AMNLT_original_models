@@ -1,11 +1,10 @@
 {
     "data":{
-      "data_path": "Data/Solesmes/folds/",
+      "dataset_name": "PRAIG/Solesmes_staffLevel",
       "batch_size": 1,
       "vocab_name": "Solesmes",
-      "img_format": ".png",
       "transcript_format": "char",
-      "num_workers": 20,
+      "num_workers": 2,
       "reduce_ratio": 1.0
     }
 }

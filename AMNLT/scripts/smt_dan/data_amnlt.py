@@ -14,92 +14,9 @@ from rich import progress
 from lightning import LightningDataModule
 from torch.utils.data import Dataset
 from torchvision import transforms
+import torchvision.transforms.v2 as v2
 
-from joblib import Memory
-location = './cachedir'
-memory = Memory(location, verbose=0)
-
-@memory.cache
-def load_set(path, base_folder, fileformat, notation, reduce_ratio=1.0, fixed_size=None):
-    x = []
-    y = []
-    with open(path) as datafile:
-        lines = datafile.readlines()
-        for line in progress.track(lines):
-            excerpt = line.replace("\n", "")
-            try:
-                if notation == "music_aware":
-                    gt_folder = "GT_music_aware"
-                else:
-                    gt_folder = "GT"
-                with open(f"Data/{base_folder}/{gt_folder}/{'.'.join(excerpt.split('.')[:-1])}.gabc") as gabcfile:
-                    gabc_content = gabcfile.read()
-                    fname = ".".join(excerpt.split('.')[:-1])
-                    img = cv2.imread(f"Data/{base_folder}/Images/{fname}{fileformat}")
-                    if fixed_size != None:
-                        width = fixed_size[1]
-                        height = fixed_size[0]
-                    elif img.shape[1] > 3056:
-                        width = int(np.ceil(3056 * reduce_ratio))
-                        height = int(np.ceil(max(img.shape[0], 256) * reduce_ratio))
-                    else:
-                        width = int(np.ceil(img.shape[1] * reduce_ratio))
-                        height = int(np.ceil(max(img.shape[0], 256) * reduce_ratio))
-
-                    img = cv2.resize(img, (width, height))
-                    y.append([content + '\n' for content in gabc_content.split("\n")])
-                    x.append(img)
-                    
-            except Exception:
-                print(f'Error reading Data/{base_folder}/{excerpt}')
-
-    return x, y
-
-@memory.cache
-def load_set_online(path, base_folder, fileformat, notation, reduce_ratio= 1.0, fixed_size=None):
-    img_paths = []
-    img_dims = []
-    y = []
-    
-    with open(path) as datafile:
-        lines = datafile.readlines()
-        for line in progress.track(lines):
-            excerpt = line.strip()  # Clean the line
-            try:
-                #gt_folder = "GT_music_aware" if notation == "music_aware" else "GT"
-                gt_folder = "GT"
-
-                with open(f"Data/{base_folder}/{gt_folder}/{'.'.join(excerpt.split('.')[:-1])}.gabc") as gabcfile:
-                    gabc_content = gabcfile.read()
-
-                    fname = ".".join(excerpt.split('.')[:-1])
-                    img_path = f"Data/{base_folder}/Images/{fname}{fileformat}"
-                    
-                    img_paths.append(img_path)
-                    
-                    # Load the image to get its dimensions
-                    img = cv2.imread(img_path)
-                    if img is not None:
-                        if fixed_size != None:
-                            width = fixed_size[1]
-                            height = fixed_size[0]
-                        elif img.shape[1] > 3056:
-                            width = int(np.ceil(3056 * reduce_ratio))
-                            height = int(np.ceil(max(img.shape[0], 256) * reduce_ratio))
-                        else:
-                            width = int(np.ceil(img.shape[1] * reduce_ratio))
-                            height = int(np.ceil(max(img.shape[0], 256) * reduce_ratio))
-
-                        img_dims.append((height, width))  # (height, width)
-                    else:
-                        img_dims.append((0, 0))  # Handle error case if needed
-                    
-                    y.append([content + '\n' for content in gabc_content.split("\n")])
-
-            except Exception as e:
-                print(f"Error reading data from {base_folder}/{excerpt}: {e}")
-    
-    return img_paths, y, img_dims
+from datasets import load_dataset
 
 def batch_preparation_img2seq(data):
     images = [sample[0] for sample in data]
@@ -185,23 +102,49 @@ class OMRIMG2SEQDataset(Dataset):
         return self.i2w
     
 class AMNLTSingleSystem(OMRIMG2SEQDataset):
-    def __init__(self, data_path, base_folder, fileformat, notation, reduce_ratio, augment=False) -> None:
+    IMAGE = "image"
+    TRANSCRIPT = "transcription"
+
+    def __init__(self, dataset_name, split, notation, reduce_ratio, augment=False) -> None:
         self.augment = augment
         self.teacher_forcing_error_rate = 0.2
-        self.x, self.y = load_set(data_path, base_folder, fileformat, notation, reduce_ratio=reduce_ratio)
+        self.reduce_ratio = reduce_ratio
         self.notation = notation
-        self.y = self.preprocess_gt(self.y)
         self.tensorTransform = transforms.ToTensor()
         self.num_sys_gen = 1
         self.fixed_systems_num = False
+        self.fixed_size = None
+
+        self.dataset = load_dataset(dataset_name, split=split)
+        self.dataset = self.dataset.map(self.preprocess_gt)
+        self.x, self.y = self.dataset[AMNLTSingleSystem.IMAGE], self.dataset[AMNLTSingleSystem.TRANSCRIPT]
+
+    @staticmethod
+    def _load_dataset(dataset_name, split):
+        ds = load_dataset(dataset_name, split=split)
+        return ds[AMNLTSingleSystem.IMAGE], ds[AMNLTSingleSystem.TRANSCRIPT]
 
     def get_width_avgs(self):
-        widths = [image.shape[1] for image in self.x]
+        widths = [image.size[0] for image in self.x]
         return np.average(widths), np.max(widths), np.min(widths)
+    
+    def get_max_hw(self):
+        m_width = np.max([img.size[0] for img in self.x])
+        m_height = np.max([img.size[1] for img in self.x])
+
+        return m_height, m_width
 
     def __getitem__(self, index):
-        x = self.x[index]
+        x = v2.functional.to_image(self.x[index])
         y = self.y[index]
+
+        if self.fixed_size != None:
+            width = self.fixed_size[1]
+            height = self.fixed_size[0]
+        else:
+            width = int(np.ceil(min(x.shape[1], 3056) * self.reduce_ratio))
+            height = int(np.ceil(max(x.shape[0], 256) * self.reduce_ratio))
+        x = v2.functional.resize_image(x, size=[height, width])
 
         if self.augment:
             x = augment(x)
@@ -214,186 +157,68 @@ class AMNLTSingleSystem(OMRIMG2SEQDataset):
     
     def __len__(self):
         return len(self.x)
-    
-    def preprocess_gt(self, Y):
-        for idx, gabc in enumerate(Y):
-            if self.notation == "char":
-                gabc = list(gabc[0].strip())
-                
-            elif self.notation == "music_aware":
-                gabc = gabc[0]
-                muaw_gabc = []
-                i = 0
-                while i < len(gabc):
-                    if gabc[i:i+3] == "<m>":
-                        if i + 3 < len(gabc):
-                            muaw_gabc.append(gabc[i:i+4])
-                            i += 4
-                        else:
-                            break
+
+    def preprocess_gt(self, sample):
+        gabc = sample[AMNLTSingleSystem.TRANSCRIPT]
+        result = None
+        if self.notation == "char":
+            gabc = list(gabc.strip())
+            
+        elif self.notation == "music_aware":
+            muaw_gabc = []
+            i = 0
+            while i < len(gabc):
+                if gabc[i:i+3] == "<m>":
+                    if i + 3 < len(gabc):
+                        muaw_gabc.append(gabc[i:i+4])
+                        i += 4
                     else:
-                        muaw_gabc.append(gabc[i])
+                        break
+                else:
+                    muaw_gabc.append(gabc[i])
+                    i += 1
+                    
+            result = muaw_gabc
+            
+        elif self.notation == "new_gabc":
+            new_gabc = []
+            i = 0
+            while i < len(gabc):
+                if gabc[i] == "(":
+                    new_gabc.append(gabc[i])
+                    i += 1
+                    temp = ""
+                    while i < len(gabc) and gabc[i] != ")":
+                        temp += gabc[i]
                         i += 1
                         
-                gabc = muaw_gabc
-                
-            elif self.notation == "new_gabc":
-                gabc = gabc[0]
-                new_gabc = []
-                i = 0
-                while i < len(gabc):
-                    if gabc[i] == "(":
-                        new_gabc.append(gabc[i])
-                        i += 1
-                        temp = ""
-                        while i < len(gabc) and gabc[i] != ")":
-                            temp += gabc[i]
-                            i += 1
-                            
-                        for token in temp.split():
-                            new_gabc.append(token)
-                            
-                        if i < len(gabc):
-                            new_gabc.append(gabc[i])
-                            i += 1
-                    else:
-                        new_gabc.append(gabc[i])
-                        i += 1
-                
-                gabc = new_gabc
-                
-            Y[idx] = ['<bos>'] + gabc + ['<eos>']
-        return Y
-    
-class AMNLTSingleSystemOnTheFly(OMRIMG2SEQDataset):
-    def __init__(self, data_path, base_folder, fileformat, notation, reduce_ratio, augment=False) -> None:
-        self.augment = augment
-        self.teacher_forcing_error_rate = 0.2
-        self.img_paths, self.y, self.img_dims = load_set_online(data_path, base_folder, fileformat, notation, reduce_ratio=reduce_ratio)
-        self.notation = notation
-        self.reduce_ratio = reduce_ratio
-        self.y = self.preprocess_gt(self.y)
-        self.tensorTransform = transforms.ToTensor()
-        self.num_sys_gen = 1
-        self.fixed_systems_num = False
-
-    def get_width_avgs(self):
-        widths = [dims[1] for dims in self.img_dims]  # Extract widths from cached dimensions
-        return np.average(widths), np.max(widths), np.min(widths)
-    
-    def get_max_hw(self):
-        max_height = max([dims[0] for dims in self.img_dims])
-        max_width = max([dims[1] for dims in self.img_dims])
-        return max_height, max_width
-    
-    def __getitem__(self, index):
-        # Load image on-the-fly when __getitem__ is called
-        img_path = self.img_paths[index]
-        
-        # Read the image from disk
-        img = cv2.imread(img_path)
-        
-        if img is None:
-            raise ValueError(f"Error loading image at {img_path}")
-
-        # Apply resizing based on fixed size or ratio
-        if self.fixed_systems_num:
-            width = self.fixed_systems_num[1]
-            height = self.fixed_systems_num[0]
-        elif img.shape[1] > 3056:
-            width = int(np.ceil(3056 * self.reduce_ratio))
-            height = int(np.ceil(max(img.shape[0], 256) * self.reduce_ratio))
-        else:
-            width = int(np.ceil(img.shape[1] * self.reduce_ratio))
-            height = int(np.ceil(max(img.shape[0], 256) * self.reduce_ratio))
-
-        # Resize the image
-        img = cv2.resize(img, (width, height))
-
-        # Apply augmentation if enabled
-        if self.augment:
-            img = augment(img)
-        else:
-            img = convert_img_to_tensor(img)
-
-        # Convert ground truth to tensor
-        y = torch.from_numpy(np.asarray([self.w2i[token] for token in self.y[index]]))
-        decoder_input = self.apply_teacher_forcing(y)
-        
-        return img, decoder_input, y
-    
-    def __len__(self):
-        return len(self.img_paths)
-    
-    def preprocess_gt(self, Y):
-        for idx, gabc in enumerate(Y):
-            if self.notation == "char":
-                gabc = list(gabc[0].strip())
-                
-            elif self.notation == "music_aware":
-                gabc = gabc[0]
-                muaw_gabc = []
-                i = 0
-                while i < len(gabc):
-                    if gabc[i:i+3] == "<m>":
-                        if i + 3 < len(gabc):
-                            muaw_gabc.append(gabc[i:i+4])
-                            i += 4
-                        else:
-                            break
-                    else:
-                        muaw_gabc.append(gabc[i])
-                        i += 1
+                    for token in temp.split():
+                        new_gabc.append(token)
                         
-                gabc = muaw_gabc
-                
-            elif self.notation == "new_gabc":
-                gabc = gabc[0]
-                new_gabc = []
-                i = 0
-                while i < len(gabc):
-                    if gabc[i] == "(":
+                    if i < len(gabc):
                         new_gabc.append(gabc[i])
                         i += 1
-                        temp = ""
-                        while i < len(gabc) and gabc[i] != ")":
-                            temp += gabc[i]
-                            i += 1
-                            
-                        for token in temp.split():
-                            new_gabc.append(token)
-                            
-                        if i < len(gabc):
-                            new_gabc.append(gabc[i])
-                            i += 1
-                    else:
-                        new_gabc.append(gabc[i])
-                        i += 1
-                
-                gabc = new_gabc
-                
-            Y[idx] = ['<bos>'] + gabc + ['<eos>']
-        return Y
+                else:
+                    new_gabc.append(gabc[i])
+                    i += 1
+            
+            result = new_gabc
+            
+        return {AMNLTSingleSystem.TRANSCRIPT: ['<bos>'] + result + ['<eos>']}
 
 class AMNLTDataset(LightningDataModule):
     def __init__(self, config:ExperimentConfig) -> None:
         super().__init__()
-        self.data_path = config.data_path
+        self.dataset_name = config.dataset_name
         self.vocab_name = config.vocab_name
         self.batch_size = config.batch_size
         self.num_workers = config.num_workers
-        self.img_format = config.img_format
         self.notation = config.transcript_format
         self.reduce_ratio = config.reduce_ratio
-        if self.vocab_name not in ["GregoSynth", "GregoSynth_music_aware"]:
-            self.train_set = AMNLTSingleSystem(data_path=f"{self.data_path}/train_gt_fold.dat", base_folder=self.vocab_name, fileformat=self.img_format, notation=self.notation, reduce_ratio=self.reduce_ratio, augment=True)
-            self.val_set = AMNLTSingleSystem(data_path=f"{self.data_path}/val_gt_fold.dat", base_folder=self.vocab_name, fileformat=self.img_format, notation=self.notation, reduce_ratio=self.reduce_ratio)
-            self.test_set = AMNLTSingleSystem(data_path=f"{self.data_path}/test_gt_fold.dat", base_folder=self.vocab_name, fileformat=self.img_format, notation=self.notation, reduce_ratio=self.reduce_ratio)
-            
-        else:
-            self.train_set = AMNLTSingleSystemOnTheFly(data_path=f"{self.data_path}/train_gt_fold.dat", base_folder=self.vocab_name, fileformat=self.img_format, notation=self.notation, reduce_ratio=self.reduce_ratio, augment=True)
-            self.val_set = AMNLTSingleSystemOnTheFly(data_path=f"{self.data_path}/val_gt_fold.dat", base_folder=self.vocab_name, fileformat=self.img_format, notation=self.notation, reduce_ratio=self.reduce_ratio)
-            self.test_set = AMNLTSingleSystemOnTheFly(data_path=f"{self.data_path}/test_gt_fold.dat", base_folder=self.vocab_name, fileformat=self.img_format, notation=self.notation, reduce_ratio=self.reduce_ratio)
+
+        self.train_set = AMNLTSingleSystem(self.dataset_name, "train", self.notation, self.reduce_ratio, augment=True)
+        self.val_set = AMNLTSingleSystem(self.dataset_name, "validation", self.notation, self.reduce_ratio)
+        self.test_set = AMNLTSingleSystem(self.dataset_name, "test", self.notation, self.reduce_ratio)
 
         if self.notation == "music_aware":
             vocab_name = self.vocab_name + "_music_aware"

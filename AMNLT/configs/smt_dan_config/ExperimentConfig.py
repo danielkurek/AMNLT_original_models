@@ -32,10 +32,9 @@ def to_class(c: Type[T], x: Any) -> dict:
 
 @dataclass
 class Data:
-    data_path: str
+    dataset_name: str
     batch_size: int
     vocab_name: str
-    img_format: str
     num_workers: int
     reduce_ratio: float
     transcript_format: str
@@ -43,22 +42,19 @@ class Data:
     @staticmethod
     def from_dict(obj: Any) -> 'Data':
         assert isinstance(obj, dict)
-        data_path = from_str(obj.get("data_path"))
+        dataset_name = from_str(obj.get("dataset_name"))
         batch_size = from_int(obj.get("batch_size"))
         vocab_name = from_str(obj.get("vocab_name"))
-        img_format = from_str(obj.get("img_format"))
         num_workers = from_int(obj.get("num_workers"))
         reduce_ratio = from_float(obj.get("reduce_ratio"))
         transcript_format = from_str(obj.get("transcript_format"))
-        img_format = from_str(obj.get("img_format"))
-        return Data(data_path, batch_size, vocab_name, img_format, num_workers, reduce_ratio, transcript_format)
+        return Data(dataset_name, batch_size, vocab_name, num_workers, reduce_ratio, transcript_format)
 
     def to_dict(self) -> dict:
         result: dict = {}
-        result["data_path"] = from_str(self.data_path)
+        result["dataset_name"] = from_str(self.dataset_name)
         result["batch_size"] = from_int(self.batch_size)
         result["vocab_name"] = from_str(self.vocab_name)
-        result["img_format"] = from_str(self.img_format)
         result["num_workers"] = from_int(self.num_workers)
         result["reduce_ratio"] = to_float(self.reduce_ratio)
         result["transcript_format"] = from_str(self.transcript_format)

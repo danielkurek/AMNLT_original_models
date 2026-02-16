@@ -1,11 +1,10 @@
 {
     "data":{
-      "data_path": "Data/Einsiedeln/folds/",
+      "dataset_name": "PRAIG/Einsiedeln_staffLevel",
       "batch_size": 1,
       "vocab_name": "Einsiedeln",
-      "img_format": ".jpg",
       "transcript_format": "new_gabc",
-      "num_workers": 20,
+      "num_workers": 2,
       "reduce_ratio": 0.75
     }
 }

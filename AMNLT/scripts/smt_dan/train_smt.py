@@ -12,12 +12,13 @@ from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 
 torch.set_float32_matmul_precision('high')
 
-def main(config_path, dataset_name):
+def main(config_path):
     
     with open(config_path, "r") as f:
         config = experiment_config_from_dict(json.load(f))
     
     datamodule = AMNLTDataset(config=config.data)
+    dataset_name = config.data.dataset_name.replace('/','-')
 
     max_height, max_width = datamodule.train_set.get_max_hw()
     max_len = datamodule.train_set.get_max_seqlen()
@@ -44,8 +45,8 @@ def main(config_path, dataset_name):
 
     trainer.test(model, datamodule=datamodule)
 
-def launch(config_path, dataset_name):
-    main(config_path, dataset_name)
+def launch(config_path):
+    main(config_path)
 
 if __name__ == "__main__":
     fire.Fire(launch)
