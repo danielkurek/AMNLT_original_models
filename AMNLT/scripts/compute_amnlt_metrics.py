@@ -12,9 +12,16 @@ from gabcparser.utils import separate_lyrics_music
 import gabcparser.grammars as grammars
 from AMNLT.utils.dc_base_unfolding_utils.dataset import make_vocabulary, Separation
 
-# Set to True to save per-sample metrics in JSON
-save_per_sample_metrics = True
-output_json = "per_sample_metrics.json"  # Output filename
+import argparse
+
+if __name__ == "__main__":
+    supported_datasets = ["PRAIG/GregoSynth_staffLevel", "PRAIG/Solesmes_staffLevel", "PRAIG/Einsiedeln_staffLevel", "PRAIG/Salzinnes_staffLevel"]
+    parser = argparse.ArgumentParser(prog="Evaluation metrics for AMNLT")
+    parser.add_argument("-s", "--split", type=str, default="test", help="Dataset split")
+    parser.add_argument("--per_sample_metric", type=str, default=None, help="Name of a file for per sample metrics JSON file")
+    parser.add_argument("--n_samples", type=int, default=0, help="Number of samples that will be used (first n samples) - 0=all samples")
+    parser.add_argument("dataset", choices=supported_datasets, help="Dataset name on Huggingface")
+    parser.add_argument("predictions", type=str, help="Predictions output from model")
 
 def get_bwer(X, Y, verbose=False):
     fxv = Counter(X)
@@ -273,7 +280,7 @@ def generate_separated_transcriptions(dataset, dataset_name, gabc_variation = No
             error_indices.append(i)
     return error_indices, new_dataset
 
-def metrics(predictions_file, dataset, dataset_name, n_samples):
+def metrics(predictions_file, dataset, dataset_name, n_samples, per_sample_metrics_filename=None):
     sorted_music_vocab = None
     error_indices, dataset = generate_separated_transcriptions(dataset, dataset_name)
     if len(error_indices) > 0:
@@ -312,10 +319,10 @@ def metrics(predictions_file, dataset, dataset_name, n_samples):
             "amler": sample_amler,
             "aler": sample_aler
         })
-    if save_per_sample_metrics:
-        with open(output_json, "w", encoding="utf-8") as f:
+    if per_sample_metrics_filename is not None:
+        with open(per_sample_metrics_filename, "w", encoding="utf-8") as f:
             json.dump(per_sample, f, indent=2, ensure_ascii=False)
-        print(f"Saved per-sample metrics in {output_json}")
+        print(f"Saved per-sample metrics in {per_sample_metrics_filename}")
     total_bwer = 0
     total_amler = 0
     for x, y in zip(y_true, y_pred):
@@ -335,17 +342,10 @@ def metrics(predictions_file, dataset, dataset_name, n_samples):
     print(f"\tAMLER: {round(amler, 2)}")
     print(f"\tBWER: {round(bwer, 2)}")
 
-if __name__ == "__main__":
-    split = "test"
-    dataset_name = "PRAIG/Einsiedeln_staffLevel"
-    model = "crnn"
-    dc = False
-    alignment = "tm_grouped"
-    n_samples = 0  # set to 0 for all, or any number for partial output
+def main(args):
+    ds = load_dataset(args.dataset, split=args.split)
+    metrics(args.predictions, ds, args.dataset, args.n_samples, args.per_sample_metric)
 
-    if dc:
-        raise NotImplementedError()
-    else:
-        predictions_file = f"predictions_{dataset_name.replace('/','-')}.txt"
-    ds = load_dataset(dataset_name, split=split)
-    metrics(predictions_file, ds, dataset_name, n_samples)
+if __name__ == "__main__":
+    args = parser.parse_args()
+    main(args)
