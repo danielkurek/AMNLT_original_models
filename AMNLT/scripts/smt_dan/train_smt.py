@@ -3,7 +3,6 @@ import json
 import torch
 from data_amnlt import AMNLTDataset
 from smt_trainer import SMT_Trainer
-from dan_trainer import DAN_Trainer
 
 from AMNLT.configs.smt_dan_config.ExperimentConfig import experiment_config_from_dict
 from lightning.pytorch import Trainer

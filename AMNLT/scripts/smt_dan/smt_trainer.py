@@ -7,10 +7,9 @@ import lightning.pytorch as L
 import sys
 
 from torchinfo import summary
-from eval_functions import compute_poliphony_metrics, compute_metric
-from smt_model import SMTConfig
-from smt_model import SMTModelForCausalLM
-from smt_model.modeling_dan import DANForCausalLM
+from eval_functions import compute_metric
+from AMNLT.models.dan_smt_model.configuration_smt import SMTConfig
+from AMNLT.models.dan_smt_model.modeling_smt import SMTModelForCausalLM
 
 class SMT_Trainer(L.LightningModule):
     def __init__(self, maxh, maxw, maxlen, out_categories, padding_token, in_channels, w2i, i2w, d_model=256, dim_ff=256, num_dec_layers=8):
@@ -54,24 +53,6 @@ class SMT_Trainer(L.LightningModule):
 
         self.preds.append(dec)
         self.grtrs.append(gt)
-        
-    def on_validation_epoch_end_krn(self, metric_name="val") -> None:
-        cer, ser, ler = compute_poliphony_metrics(self.preds, self.grtrs)
-        
-        random_index = random.randint(0, len(self.preds)-1)
-        predtoshow = self.preds[random_index]
-        gttoshow = self.grtrs[random_index]
-        print(f"[Prediction] - {predtoshow}")
-        print(f"[GT] - {gttoshow}")
-        
-        self.log(f'{metric_name}_CER', cer, on_epoch=True, prog_bar=True)
-        self.log(f'{metric_name}_SER', ser, on_epoch=True, prog_bar=True)
-        self.log(f'{metric_name}_LER', ler, on_epoch=True, prog_bar=True)
-        
-        self.preds = []
-        self.grtrs = []
-        
-        return ser
     
     def on_validation_epoch_end(self, metric_name="val") -> None:
         cer = compute_metric(self.preds, self.grtrs)

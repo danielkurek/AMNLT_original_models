@@ -7,9 +7,9 @@ import cv2
 import sys
 import gc
 
-from ExperimentConfig import ExperimentConfig
-from data_augmentation.data_augmentation import augment, convert_img_to_tensor
-from utils import check_and_retrieveVocabulary
+from AMNLT.configs.smt_dan_config.ExperimentConfig import ExperimentConfig
+from AMNLT.utils.smt_dan_utils.data_augmentation import augment, convert_img_to_tensor
+from AMNLT.utils.smt_dan_utils.utils import check_and_retrieveVocabulary
 from rich import progress
 from lightning import LightningDataModule
 from torch.utils.data import Dataset
