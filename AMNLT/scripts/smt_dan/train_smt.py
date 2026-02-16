@@ -27,9 +27,9 @@ def main(config_path, dataset_name):
                                 in_channels=1, w2i=datamodule.train_set.w2i, i2w=datamodule.train_set.i2w, 
                                 d_model=256, dim_ff=256, num_dec_layers=8)
     
-    wandb_logger = WandbLogger(project='DAN_AMNLT', group=dataset_name, name=f"DAN_{dataset_name}", log_model=False)
+    wandb_logger = WandbLogger(project='SMT_AMNLT', group=dataset_name, name=f"SMT_{dataset_name}", log_model=False)
     
-    checkpointer = ModelCheckpoint(dirpath=f"weights/{dataset_name}/", filename=f"{dataset_name}_DAN", 
+    checkpointer = ModelCheckpoint(dirpath=f"weights/{dataset_name}/", filename=f"{dataset_name}_SMT", 
                                    monitor="val_CER", mode='min',
                                    save_top_k=1, verbose=True)
 
