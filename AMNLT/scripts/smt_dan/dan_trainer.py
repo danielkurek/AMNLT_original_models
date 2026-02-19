@@ -5,6 +5,7 @@ import numpy as np
 import torch.nn as nn
 import lightning.pytorch as L
 import sys
+from typing import Any
 
 from torchinfo import summary
 from eval_functions import compute_metric
@@ -75,7 +76,7 @@ class DAN_Trainer(L.LightningModule):
         
         return cer
     
-    def test_step(self, test_batch) -> torch.Tensor | torch.Dict[str, torch.Any] | None:
+    def test_step(self, test_batch) -> torch.Tensor | dict[str, Any] | None:
         return self.validation_step(test_batch)
     
     def on_test_epoch_end(self) -> None:
