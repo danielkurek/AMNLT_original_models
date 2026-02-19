@@ -41,7 +41,6 @@ def main(config_path, patience):
             mode="min",
             strict=True,
             check_finite=True,
-            divergence_threshold=100.00,
             check_on_train_epoch_end=False,
         )
 
