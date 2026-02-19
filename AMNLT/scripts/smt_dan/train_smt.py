@@ -52,7 +52,7 @@ def main(config_path, patience):
     
     trainer.fit(model_wrapper,datamodule=datamodule)
 
-    model = SMT_Trainer.load_from_checkpoint(checkpointer.best_model_path)
+    model = SMT_Trainer.load_from_checkpoint(checkpointer.best_model_path, weights_only=False)
 
     trainer.test(model, datamodule=datamodule)
 
