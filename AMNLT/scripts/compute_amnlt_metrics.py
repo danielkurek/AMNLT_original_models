@@ -65,9 +65,6 @@ def get_mer(resultado_final, dataset, dataset_name, verbose=False):
             print(result)
             print(mer)
             random_sample = False
-            
-        if base_name == "034r_1":
-            print(mer * 100.00)
     if verbose:
         print("Worst MER:" + str(worst_mer))
         print("\tGT: " + str(worst_gt))
@@ -111,9 +108,6 @@ def get_cer_syler(resultado_final, dataset, verbose=False):
             worst_cer = cer
             worst_gt = gt_text
             worst_result = result
-        if base_name == "034r_1":
-            print(cer * 100.00)
-            print(syler * 100.00)
     if verbose:
         print("Worst CER:" + str(worst_cer))
         print("\tGT: " + str(worst_gt))
