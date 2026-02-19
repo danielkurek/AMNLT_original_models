@@ -10,6 +10,18 @@ from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import WandbLogger
 from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 
+import numpy as np
+import random
+
+# Seed
+random.seed(42)
+np.random.seed(42)
+torch.manual_seed(42)
+
+# Deterministic behavior
+torch.backends.cudnn.benchmark = False
+torch.backends.cudnn.deterministic = True
+
 torch.set_float32_matmul_precision('high')
 
 def main(config_path, patience):
