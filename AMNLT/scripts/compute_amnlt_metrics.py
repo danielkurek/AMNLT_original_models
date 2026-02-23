@@ -18,6 +18,7 @@ if __name__ == "__main__":
     supported_datasets = ["PRAIG/GregoSynth_staffLevel", "PRAIG/Solesmes_staffLevel", "PRAIG/Einsiedeln_staffLevel", "PRAIG/Salzinnes_staffLevel"]
     parser = argparse.ArgumentParser(prog="Evaluation metrics for AMNLT")
     parser.add_argument("-s", "--split", type=str, default="test", help="Dataset split")
+    parser.add_argument("-t", "--threads", type=int, default=None, help="Number of threads allowed to be used")
     parser.add_argument("--per_sample_metric", type=str, default=None, help="Name of a file for per sample metrics JSON file")
     parser.add_argument("--n_samples", type=int, default=0, help="Number of samples that will be used (first n samples) - 0=all samples")
     parser.add_argument("dataset", choices=supported_datasets, help="Dataset name on Huggingface")
@@ -253,7 +254,7 @@ def dataset_separation(example, parser):
     lyric, music = separate_lyrics_music.separate_lyrics_music(example["transcription"], parser, filtered_symbol=" ")
     return {"transcription_lyric": lyric, "transcription_music": music}
 
-def generate_separated_transcriptions(dataset, dataset_name, gabc_variation = None):
+def generate_separated_transcriptions(dataset, dataset_name, gabc_variation = None, remove_images = True, num_threads = None):
     if gabc_variation is None:
         if dataset_name in ["gregosynth", "PRAIG/GregoSynth_staffLevel"]:
             gabc_variation = grammars.GABC
@@ -266,7 +267,7 @@ def generate_separated_transcriptions(dataset, dataset_name, gabc_variation = No
     
     parser = GabcParser.load_parser(gabc_variation)
 
-    new_dataset = dataset.map(functools.partial(dataset_separation, parser=parser))
+    new_dataset = dataset.map(functools.partial(dataset_separation, parser=parser), remove_columns=["image"] if remove_images else [],num_proc=num_threads)
 
     error_indices = []
     for i,example in enumerate(new_dataset):
@@ -274,9 +275,9 @@ def generate_separated_transcriptions(dataset, dataset_name, gabc_variation = No
             error_indices.append(i)
     return error_indices, new_dataset
 
-def metrics(predictions_file, dataset, dataset_name, n_samples, per_sample_metrics_filename=None):
+def metrics(predictions_file, dataset, dataset_name, n_samples, per_sample_metrics_filename=None, num_threads=None):
     sorted_music_vocab = None
-    error_indices, dataset = generate_separated_transcriptions(dataset, dataset_name)
+    error_indices, dataset = generate_separated_transcriptions(dataset, dataset_name, num_threads=num_threads)
     if len(error_indices) > 0:
         if len(error_indices) < 100:
             print(f"Could not separate lyrics and musics for the following samples: {error_indices}")
@@ -284,7 +285,7 @@ def metrics(predictions_file, dataset, dataset_name, n_samples, per_sample_metri
             print(f"Could not separate lyrics and musics for {len(error_indices)} samples (e.g. {error_indices[:10]}")
         print("THESE RESULTS ARE THEREFORE INVALID UNTIL THE ERRORS ARE CORRECTED")
     
-    dataset = dataset.filter(lambda example: example["transcription_lyric"] is not None and example["transcription_music"] is not None)
+    dataset = dataset.filter(lambda example: example["transcription_lyric"] is not None and example["transcription_music"] is not None, num_proc=num_threads)
 
     if dataset_name in ["einsiedeln", "salzinnes", "PRAIG/Einsiedeln_staffLevel", "PRAIG/Salzinnes_staffLevel"]:
         # Consider adding caching for the vocabulary
@@ -344,7 +345,7 @@ def metrics(predictions_file, dataset, dataset_name, n_samples, per_sample_metri
 
 def main(args):
     ds = load_dataset(args.dataset, split=args.split)
-    metrics(args.predictions, ds, args.dataset, args.n_samples, args.per_sample_metric)
+    metrics(args.predictions, ds, args.dataset, args.n_samples, args.per_sample_metric, args.threads)
 
 if __name__ == "__main__":
     args = parser.parse_args()
