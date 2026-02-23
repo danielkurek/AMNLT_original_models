@@ -142,8 +142,8 @@ class AMNLTSingleSystem(OMRIMG2SEQDataset):
             width = self.fixed_size[1]
             height = self.fixed_size[0]
         else:
-            width = int(np.ceil(min(x.shape[1], 3056) * self.reduce_ratio))
-            height = int(np.ceil(max(x.shape[0], 256) * self.reduce_ratio))
+            width = int(np.ceil(min(x.shape[2], 3056) * self.reduce_ratio))
+            height = int(np.ceil(max(x.shape[1], 256) * self.reduce_ratio))
         x = v2.functional.resize_image(x, size=[height, width])
 
         if self.augment:
