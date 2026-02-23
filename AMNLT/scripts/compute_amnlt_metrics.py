@@ -278,8 +278,11 @@ def metrics(predictions_file, dataset, dataset_name, n_samples, per_sample_metri
     sorted_music_vocab = None
     error_indices, dataset = generate_separated_transcriptions(dataset, dataset_name)
     if len(error_indices) > 0:
-        print(f"Could not separate lyrics and musics for the following samples: {error_indices}")
-        print("THESE RESULTS ARE THEREFORE INVALID UNTIL THE ERROR IS CORRECTED")
+        if len(error_indices) < 100:
+            print(f"Could not separate lyrics and musics for the following samples: {error_indices}")
+        else:
+            print(f"Could not separate lyrics and musics for {len(error_indices)} samples (e.g. {error_indices[:10]}")
+        print("THESE RESULTS ARE THEREFORE INVALID UNTIL THE ERRORS ARE CORRECTED")
     if dataset_name in ["einsiedeln", "salzinnes", "PRAIG/Einsiedeln_staffLevel", "PRAIG/Salzinnes_staffLevel"]:
         # Consider adding caching for the vocabulary
         music_vocab, _ = make_vocabulary(dataset_name, "new_gabc", Separation.MUSIC)
