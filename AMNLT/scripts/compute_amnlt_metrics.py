@@ -283,6 +283,9 @@ def metrics(predictions_file, dataset, dataset_name, n_samples, per_sample_metri
         else:
             print(f"Could not separate lyrics and musics for {len(error_indices)} samples (e.g. {error_indices[:10]}")
         print("THESE RESULTS ARE THEREFORE INVALID UNTIL THE ERRORS ARE CORRECTED")
+    
+    dataset = dataset.filter(lambda example: example["transcription_lyric"] is not None and example["transcription_music"] is not None)
+
     if dataset_name in ["einsiedeln", "salzinnes", "PRAIG/Einsiedeln_staffLevel", "PRAIG/Salzinnes_staffLevel"]:
         # Consider adding caching for the vocabulary
         music_vocab, _ = make_vocabulary(dataset_name, "new_gabc", Separation.MUSIC)
