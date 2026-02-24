@@ -125,25 +125,27 @@ class AMNLTSingleSystem(OMRIMG2SEQDataset):
         return ds[AMNLTSingleSystem.IMAGE], ds[AMNLTSingleSystem.TRANSCRIPT]
 
     def get_width_avgs(self):
-        widths = [image.size[0] for image in self.x]
+        widths = [self._get_new_img_size(img.size[1], img.size[0])[1] for img in self.x]
         return np.average(widths), np.max(widths), np.min(widths)
     
     def get_max_hw(self):
-        m_width = np.max([img.size[0] for img in self.x])
-        m_height = np.max([img.size[1] for img in self.x])
-
-        return m_height, m_width
+        max_size = np.max([self._get_new_img_size(img.size[1], img.size[0]) for img in self.x], axis=0)
+        return max_size[0], max_size[1]
+    
+    def _get_new_img_size(self, height, width):
+        if self.fixed_size != None:
+            width = self.fixed_size[1]
+            height = self.fixed_size[0]
+        else:
+            width = int(np.ceil(min(width, 3056) * self.reduce_ratio))
+            height = int(np.ceil(max(height, 256) * self.reduce_ratio))
+        return height, width
 
     def __getitem__(self, index):
         x = v2.functional.to_image(self.x[index])
         y = self.y[index]
 
-        if self.fixed_size != None:
-            width = self.fixed_size[1]
-            height = self.fixed_size[0]
-        else:
-            width = int(np.ceil(min(x.shape[2], 3056) * self.reduce_ratio))
-            height = int(np.ceil(max(x.shape[1], 256) * self.reduce_ratio))
+        height, width = self._get_new_img_size(x.shape[1], x.shape[2])
         x = v2.functional.resize_image(x, size=[height, width])
 
         if self.augment:
