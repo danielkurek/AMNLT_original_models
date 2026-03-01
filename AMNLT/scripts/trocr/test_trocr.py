@@ -16,9 +16,15 @@ def test_trocr(
     checkpoint_path: str,
     encoding_type="char",
     batch_size=1,
+    threads=2
 ):
     gc.collect()
     torch.cuda.empty_cache()
+    if threads is not None and threads > 0:
+        if torch.get_num_threads() != threads:
+            torch.set_num_threads(threads)
+        if torch.get_num_interop_threads() != threads:
+            torch.set_num_interop_threads(threads)
 
     print(f"🔍 Testing TrOCR on dataset: {ds_name}")
     print(f"📦 Loading model from checkpoint: {checkpoint_path}")

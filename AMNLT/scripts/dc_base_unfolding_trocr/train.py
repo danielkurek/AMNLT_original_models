@@ -22,7 +22,6 @@ torch.manual_seed(42)
 torch.backends.cudnn.benchmark = False
 torch.backends.cudnn.deterministic = True
 
-
 def train(
     ds_name,
     model_name,
@@ -38,11 +37,16 @@ def train(
     fine_tune=False,
     pretrain_model_path=None,
     ctc="greedy",
-    num_workers=2
+    num_workers=2,
+    threads=2
 ):
     gc.collect()
     torch.cuda.empty_cache()
-
+    if threads is not None and threads > 0:
+        if torch.get_num_threads() != threads:
+            torch.set_num_threads(threads)
+        if torch.get_num_interop_threads() != threads:
+            torch.set_num_interop_threads(threads)
 
     # Experiment info
     print(f"Running experiment: {project} - {group} - {model_name}")
@@ -163,6 +167,7 @@ def train(
         )
     ]
     trainer = Trainer(
+        accelerator="cuda",
         logger=loggers,
         callbacks=callbacks,
         max_epochs=epochs,

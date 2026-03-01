@@ -24,7 +24,12 @@ torch.backends.cudnn.deterministic = True
 
 torch.set_float32_matmul_precision('high')
 
-def main(config_path, patience):
+def main(config_path, patience=5, threads=2):
+    if threads is not None and threads > 0:
+        if torch.get_num_threads() != threads:
+            torch.set_num_threads(threads)
+        if torch.get_num_interop_threads() != threads:
+            torch.set_num_interop_threads(threads)
     
     with open(config_path, "r") as f:
         config = experiment_config_from_dict(json.load(f))
@@ -78,8 +83,5 @@ def main(config_path, patience):
 
     trainer.test(model, datamodule=datamodule)
 
-def launch(config_path, patience = 5):
-    main(config_path, patience)
-
 if __name__ == "__main__":
-    fire.Fire(launch)
+    fire.Fire(main)

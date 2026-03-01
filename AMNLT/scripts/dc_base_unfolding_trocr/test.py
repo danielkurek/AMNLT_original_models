@@ -32,10 +32,16 @@ def test(
     entity="el_iseo",
     ctc="greedy",
     num_workers=2,
+    threads=2
 ):
     gc.collect()
     torch.cuda.empty_cache()
-
+    if threads is not None and threads > 0:
+        if torch.get_num_threads() != threads:
+            torch.set_num_threads(threads)
+        if torch.get_num_interop_threads() != threads:
+            torch.set_num_interop_threads(threads)
+    
     # Check if checkpoint path exists
     if not os.path.exists(checkpoint_path):
         raise FileNotFoundError(f"Checkpoint path {checkpoint_path} does not exist")

@@ -13,7 +13,12 @@ from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 
 torch.set_float32_matmul_precision('high')
 
-def main(config_path, checkpoint_path):
+def main(config_path, checkpoint_path, threads=2):
+    if threads is not None and threads > 0:
+        if torch.get_num_threads() != threads:
+            torch.set_num_threads(threads)
+        if torch.get_num_interop_threads() != threads:
+            torch.set_num_interop_threads(threads)
 
     # Check if checkpoint path exists
     if not os.path.exists(checkpoint_path):
@@ -47,8 +52,5 @@ def main(config_path, checkpoint_path):
 
     trainer.test(model, datamodule=datamodule)
 
-def launch(config_path, checkpoint_path):
-    main(config_path, checkpoint_path)
-
 if __name__ == "__main__":
-    fire.Fire(launch)
+    fire.Fire(main)
