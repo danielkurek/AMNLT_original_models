@@ -9,7 +9,7 @@ import os
 from AMNLT.configs.smt_dan_config.ExperimentConfig import experiment_config_from_dict
 from lightning.pytorch import Trainer
 from lightning.pytorch.callbacks import ModelCheckpoint
-from lightning.pytorch.loggers import WandbLogger
+from lightning.pytorch.loggers import WandbLogger, TensorBoardLogger
 from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 
 torch.set_float32_matmul_precision('high')
@@ -28,11 +28,21 @@ def main(config_path, checkpoint_path):
     model = DAN_Trainer.load_from_checkpoint(checkpoint_path, weights_only=False)
     model.freeze()
     
-    wandb_logger = WandbLogger(project='DAN_AMNLT-Test', group=dataset_name, name=f"DAN_{dataset_name}", log_model=False)
+    experiment_name = f"DAN_{dataset_name}_test"
+    loggers = [
+        TensorBoardLogger(
+            save_dir="logs/",
+            name=experiment_name
+        ),
+        WandbLogger(
+            project='DAN_AMNLT-Test',
+            group=dataset_name,
+            name=experiment_name,
+            log_model=False)
+    ]
     
-
     trainer = Trainer(
-                      logger=wandb_logger,
+                      logger=loggers,
                       precision="16-mixed")
 
     trainer.test(model, datamodule=datamodule)

@@ -7,7 +7,7 @@ from smt_trainer import SMT_Trainer
 from AMNLT.configs.smt_dan_config.ExperimentConfig import experiment_config_from_dict
 from lightning.pytorch import Trainer
 from lightning.pytorch.callbacks import ModelCheckpoint
-from lightning.pytorch.loggers import WandbLogger
+from lightning.pytorch.loggers import WandbLogger, TensorBoardLogger
 from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 
 import numpy as np
@@ -40,8 +40,19 @@ def main(config_path, patience):
                                 in_channels=1, w2i=datamodule.train_set.w2i, i2w=datamodule.train_set.i2w, 
                                 d_model=256, dim_ff=256, num_dec_layers=8)
     
-    wandb_logger = WandbLogger(project='SMT_AMNLT', group=dataset_name, name=f"SMT_{dataset_name}", log_model=False)
-    
+    experiment_name = f"SMT_{dataset_name}_train"
+    loggers = [
+        TensorBoardLogger(
+            save_dir="logs/",
+            name=experiment_name
+        ),
+        WandbLogger(
+            project='SMT_AMNLT',
+            group=dataset_name,
+            name=experiment_name,
+            log_model=False)
+    ]
+
     checkpointer = ModelCheckpoint(dirpath=f"weights/{dataset_name}/", filename=f"{dataset_name}_SMT", 
                                    monitor="val_CER", mode='min',
                                    save_top_k=1, verbose=True)
@@ -58,7 +69,7 @@ def main(config_path, patience):
 
     trainer = Trainer(max_epochs=10000, 
                       check_val_every_n_epoch=5, 
-                      logger=wandb_logger, callbacks=[checkpointer, early_stopper],
+                      logger=loggers, callbacks=[checkpointer, early_stopper],
                       precision="16-mixed")
     
     trainer.fit(model_wrapper,datamodule=datamodule)

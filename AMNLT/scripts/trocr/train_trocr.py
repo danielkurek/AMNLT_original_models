@@ -7,7 +7,7 @@ import os
 from torch.utils.data import DataLoader
 from lightning.pytorch import Trainer
 from lightning.pytorch.callbacks import ModelCheckpoint, EarlyStopping
-from lightning.pytorch.loggers import WandbLogger
+from lightning.pytorch.loggers import WandbLogger, TensorBoardLogger
 from transformers import TrOCRProcessor, PreTrainedTokenizerFast
 
 from AMNLT.models.dc_base_unfolding_trocr_models.model import CTCTrainedTrOCR
@@ -121,17 +121,24 @@ def train_trocr(
     ]
 
     # Logger
-    logger = WandbLogger(
-        project=project,
-        group=group,
-        name=f"TROCR-{encoding_type.upper()}-{ds_name}",
-        entity=entity,
-        log_model=False,
-    )
+    experiment_name = f"TROCR-{encoding_type.upper()}-{ds_name}"
+    loggers = [
+        TensorBoardLogger(
+            save_dir="logs/",
+            name=experiment_name
+        ),
+        WandbLogger(
+            project=project,
+            group=group,
+            name=f"TROCR-{encoding_type.upper()}-{ds_name}",
+            entity=entity,
+            log_model=False,
+        )
+    ]
 
     # Trainer
     trainer = Trainer(
-        logger=logger,
+        logger=loggers,
         callbacks=callbacks,
         max_epochs=epochs,
         check_val_every_n_epoch=1,

@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from lightning.pytorch import Trainer
 from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
-from lightning.pytorch.loggers.wandb import WandbLogger
+from lightning.pytorch.loggers import WandbLogger, TensorBoardLogger
 from torch.utils.data import DataLoader
 
 from AMNLT.utils.dc_base_unfolding_utils.data_preprocessing import ctc_batch_preparation
@@ -148,14 +148,22 @@ def train(
             check_on_train_epoch_end=False,
         ),
     ]
-    trainer = Trainer(
-        logger=WandbLogger(
+    experiment_name = f"{model_name.upper()}-{encoding_type.upper()}-Train-{ds_name}"
+    loggers = [
+        TensorBoardLogger(
+            save_dir="logs/",
+            name=experiment_name
+        ),
+        WandbLogger(
             project=project,
             group=group,
-            name=f"{model_name.upper()}-{encoding_type.upper()}-Train-{ds_name}",
+            name=experiment_name,
             log_model=False,
             entity=entity,
-        ),
+        )
+    ]
+    trainer = Trainer(
+        logger=loggers,
         callbacks=callbacks,
         max_epochs=epochs,
         check_val_every_n_epoch=1,

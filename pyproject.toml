@@ -48,6 +48,7 @@ dependencies = [
     "torch",
     "torchinfo",
     "torchvision",
+    "tensorboard",
     "transformers",
     "visualizer",
     "wandb>=0.12.10",

@@ -6,7 +6,7 @@ import fire
 import numpy as np
 import torch
 from lightning.pytorch import Trainer
-from lightning.pytorch.loggers.wandb import WandbLogger
+from lightning.pytorch.loggers import WandbLogger, TensorBoardLogger
 from torch.utils.data import DataLoader
 
 from AMNLT.utils.dc_base_unfolding_utils.dataset import CTCDataset
@@ -78,14 +78,21 @@ def test(
 
     # Test: automatically auto-loads the best weights from the previous run
     run_name = f"{encoding_type.upper()}-Test-{ds_name}"
-    trainer = Trainer(
-        logger=WandbLogger(
+    loggers = [
+        TensorBoardLogger(
+            save_dir="logs/",
+            name=run_name
+        ),
+        WandbLogger(
             project=project,
             group=group,
             name=run_name,
             log_model=False,
             entity=entity,
-        ),
+        )
+    ]
+    trainer = Trainer(
+        logger=loggers,
         precision="16-mixed",
     )
     trainer.test(model, dataloaders=test_loader)    
