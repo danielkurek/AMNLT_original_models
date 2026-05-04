@@ -15,13 +15,13 @@ from AMNLT.utils.dc_base_unfolding_utils.dataset import make_vocabulary, Separat
 import argparse
 
 if __name__ == "__main__":
-    supported_datasets = ["PRAIG/GregoSynth_staffLevel", "PRAIG/Solesmes_staffLevel", "PRAIG/Einsiedeln_staffLevel", "PRAIG/Salzinnes_staffLevel"]
     parser = argparse.ArgumentParser(prog="Evaluation metrics for AMNLT")
     parser.add_argument("-s", "--split", type=str, default="test", help="Dataset split")
     parser.add_argument("-t", "--threads", type=int, default=None, help="Number of threads allowed to be used")
     parser.add_argument("--per_sample_metric", type=str, default=None, help="Name of a file for per sample metrics JSON file")
     parser.add_argument("--n_samples", type=int, default=0, help="Number of samples that will be used (first n samples) - 0=all samples")
-    parser.add_argument("dataset", choices=supported_datasets, help="Dataset name on Huggingface")
+    parser.add_argument("--encoding", default=None, choices=grammars.supported_grammars, help="Encoding of dataset")
+    parser.add_argument("dataset", type=str, help="Dataset name on Huggingface")
     parser.add_argument("predictions", type=str, help="Predictions output from model")
 
 def get_bwer(X, Y, verbose=False):
@@ -38,7 +38,7 @@ def get_bwer(X, Y, verbose=False):
     diff_count = (abs(len(X) - len(Y)) + diff_count) / (2 * len(X))
     return diff_count * 100.00
 
-def get_mer(resultado_final, dataset, dataset_name, verbose=False):
+def get_mer(resultado_final, dataset, dataset_encoding, verbose=False):
     total_mer = 0.0
     mer_values = []
     random_sample = False
@@ -48,9 +48,9 @@ def get_mer(resultado_final, dataset, dataset_name, verbose=False):
         gt_text = gt_text.replace('(', ' ').replace(')', ' ')
         gt_text = ' '.join(gt_text.split())
         result = ' '.join(result.split())
-        if dataset_name in ["solesmes", "gregosynth", "PRAIG/Solesmes_staffLevel", "PRAIG/GregoSynth_staffLevel"]:
+        if dataset_encoding in [grammars.GABC, grammars.S_GABC, grammars.COMMON]:
             mer = jiwer.cer(gt_text, result)
-        elif dataset_name in ["einsiedeln", "salzinnes", "PRAIG/Einsiedeln_staffLevel", "PRAIG/Salzinnes_staffLevel"]:
+        elif dataset_encoding == grammars.MEI_GABC:
             mer = jiwer.wer(gt_text, result)
         else:
             raise NotImplementedError("Unknown dataset name")
@@ -117,7 +117,7 @@ def get_cer_syler(resultado_final, dataset, verbose=False):
     mean_syler = (total_syler / len(dataset)) * 100.00
     return mean_cer, mean_syler
 
-def extract_music_lyrics_solesmes_gregosynth_muaw(predictions_file, dataset, dataset_name):
+def extract_music_lyrics_solesmes_gregosynth_muaw(predictions_file, dataset, dataset_encoding):
     with open(predictions_file, 'r', encoding='utf-8') as transcripts_file:
         transcripts_lines = transcripts_file.readlines()
     resultado_final_music = []
@@ -144,11 +144,11 @@ def extract_music_lyrics_solesmes_gregosynth_muaw(predictions_file, dataset, dat
         without_m_string = re.sub(r'\s+', ' ', without_m_string)
         resultado_final_music.append(with_m_string)
         resultado_final_lyrics.append(without_m_string)
-    mer = get_mer(resultado_final_music, dataset, dataset_name)
+    mer = get_mer(resultado_final_music, dataset, dataset_encoding)
     cer, syler = get_cer_syler(resultado_final_lyrics, dataset)
     return mer, cer, syler
 
-def extract_music_lyrics_einsiedeln_salzinnes(predictions_file, dataset, dataset_name, sorted_music_vocab):
+def extract_music_lyrics_einsiedeln_salzinnes(predictions_file, dataset, dataset_encoding, sorted_music_vocab):
     with open(predictions_file, 'r', encoding='utf-8') as transcripts_file:
         transcripts_lines = transcripts_file.readlines()
     resultado_final_music = []
@@ -179,7 +179,7 @@ def extract_music_lyrics_einsiedeln_salzinnes(predictions_file, dataset, dataset
             else:
                 i += 1
         resultado_final_music.append(" ".join(transcript_music).replace("(", "").replace(")", ""))
-    mer = get_mer(resultado_final_music, dataset, dataset_name)
+    mer = get_mer(resultado_final_music, dataset, dataset_encoding)
     cer, syler = get_cer_syler(resultado_final_lyrics, dataset)
     return mer, cer, syler
 
@@ -254,17 +254,7 @@ def dataset_separation(example, parser):
     lyric, music = separate_lyrics_music.separate_lyrics_music(example["transcription"], parser, filtered_symbol=" ")
     return {"transcription_lyric": lyric, "transcription_music": music}
 
-def generate_separated_transcriptions(dataset, dataset_name, gabc_variation = None, remove_images = True, num_threads = None):
-    if gabc_variation is None:
-        if dataset_name in ["gregosynth", "PRAIG/GregoSynth_staffLevel"]:
-            gabc_variation = grammars.GABC
-        elif dataset_name in ["solesmes", "PRAIG/Solesmes_staffLevel"]:
-            gabc_variation = grammars.S_GABC
-        elif dataset_name in ["einsiedeln", "salzinnes", "PRAIG/Einsiedeln_staffLevel", "PRAIG/Salzinnes_staffLevel"]:
-            gabc_variation = grammars.MEI_GABC
-        else:
-            raise ValueError(f"Could not infer gabc variation for the unknown dataset '{dataset_name}'")
-    
+def generate_separated_transcriptions(dataset, gabc_variation, remove_images = True, num_threads = None):
     parser = GabcParser.load_parser(gabc_variation)
 
     new_dataset = dataset.map(functools.partial(dataset_separation, parser=parser), remove_columns=["image"] if remove_images else [],num_proc=num_threads)
@@ -275,9 +265,9 @@ def generate_separated_transcriptions(dataset, dataset_name, gabc_variation = No
             error_indices.append(i)
     return error_indices, new_dataset
 
-def metrics(predictions_file, dataset, dataset_name, n_samples, per_sample_metrics_filename=None, num_threads=None):
+def metrics(predictions_file, dataset, dataset_name, dataset_encoding, n_samples, per_sample_metrics_filename=None, num_threads=None):
     sorted_music_vocab = None
-    error_indices, dataset = generate_separated_transcriptions(dataset, dataset_name, num_threads=num_threads)
+    error_indices, dataset = generate_separated_transcriptions(dataset, dataset_encoding, num_threads=num_threads)
     if len(error_indices) > 0:
         if len(error_indices) < 100:
             print(f"Could not separate lyrics and musics for the following samples: {error_indices}")
@@ -287,15 +277,15 @@ def metrics(predictions_file, dataset, dataset_name, n_samples, per_sample_metri
     
     dataset = dataset.filter(lambda example: example["transcription_lyric"] is not None and example["transcription_music"] is not None, num_proc=num_threads)
 
-    if dataset_name in ["einsiedeln", "salzinnes", "PRAIG/Einsiedeln_staffLevel", "PRAIG/Salzinnes_staffLevel"]:
+    if dataset_encoding == grammars.MEI_GABC:
         # Consider adding caching for the vocabulary
         music_vocab, _ = make_vocabulary(dataset_name, "new_gabc", Separation.MUSIC)
         sorted_music_vocab = sorted(music_vocab.keys(), key=len, reverse=True)
     
-    if dataset_name in ["solesmes", "gregosynth", "PRAIG/Solesmes_staffLevel", "PRAIG/GregoSynth_staffLevel"]:
-        mer, cer, syler = extract_music_lyrics_solesmes_gregosynth_muaw(predictions_file, dataset, dataset_name)
-    elif dataset_name in ["einsiedeln", "salzinnes", "PRAIG/Einsiedeln_staffLevel", "PRAIG/Salzinnes_staffLevel"]:
-        mer, cer, syler = extract_music_lyrics_einsiedeln_salzinnes(predictions_file, dataset, dataset_name, sorted_music_vocab)
+    if dataset_encoding in [grammars.GABC, grammars.S_GABC, grammars.COMMON]:
+        mer, cer, syler = extract_music_lyrics_solesmes_gregosynth_muaw(predictions_file, dataset, dataset_encoding)
+    elif dataset_encoding == grammars.MEI_GABC:
+        mer, cer, syler = extract_music_lyrics_einsiedeln_salzinnes(predictions_file, dataset, dataset_encoding, sorted_music_vocab)
     with open(predictions_file, 'r', encoding='utf-8') as transcript_file:
         predictions_lines = transcript_file.readlines()
     y_true = ["".join(s.replace('\n', ' ')) for s in dataset["transcription"]]
@@ -305,9 +295,9 @@ def metrics(predictions_file, dataset, dataset_name, n_samples, per_sample_metri
     if n_samples == 0 or n_samples > N:
         n_samples = N
     for i in range(n_samples):
-        if dataset_name in ["solesmes", "gregosynth", "PRAIG/Solesmes_staffLevel", "PRAIG/GregoSynth_staffLevel"]:
+        if dataset_encoding in [grammars.GABC, grammars.S_GABC, grammars.COMMON]:
             x_tokens, y_tokens = tokenization_muaw(dataset["transcription"][i].replace('\n', ' '), predictions_lines[i])
-        elif dataset_name in ["einsiedeln", "salzinnes", "PRAIG/Einsiedeln_staffLevel", "PRAIG/Salzinnes_staffLevel"]:
+        elif dataset_encoding == grammars.MEI_GABC:
             x_tokens, y_tokens = tokenization_pseudo(dataset["transcription"][i].replace('\n', ' '), predictions_lines[i], sorted_music_vocab)
         sample_bwer = get_bwer(x_tokens, y_tokens)
         sample_amler = jiwer.wer(" ".join(x_tokens), " ".join(y_tokens)) * 100.00
@@ -327,9 +317,9 @@ def metrics(predictions_file, dataset, dataset_name, n_samples, per_sample_metri
     total_bwer = 0
     total_amler = 0
     for x, y in zip(y_true, y_pred):
-        if dataset_name in ["solesmes", "gregosynth", "PRAIG/Solesmes_staffLevel", "PRAIG/GregoSynth_staffLevel"]:
+        if dataset_encoding in [grammars.GABC, grammars.S_GABC, grammars.COMMON]:
             x_tokens, y_tokens = tokenization_muaw(x, y)
-        elif dataset_name in ["einsiedeln", "salzinnes", "PRAIG/Einsiedeln_staffLevel", "PRAIG/Salzinnes_staffLevel"]:
+        elif dataset_encoding == grammars.MEI_GABC:
             x_tokens, y_tokens = tokenization_pseudo(x, y, sorted_music_vocab)
         total_bwer += get_bwer(x_tokens, y_tokens)
         total_amler += jiwer.wer(" ".join(x_tokens), " ".join(y_tokens)) * 100.00
@@ -345,7 +335,17 @@ def metrics(predictions_file, dataset, dataset_name, n_samples, per_sample_metri
 
 def main(args):
     ds = load_dataset(args.dataset, split=args.split)
-    metrics(args.predictions, ds, args.dataset, args.n_samples, args.per_sample_metric, args.threads)
+    if args.encoding is None:
+        match(args.dataset):
+            case "PRAIG/GregoSynth_staffLevel":
+                args.encoding = grammars.GABC
+            case "PRAIG/Einsiedeln_staffLevel" | "PRAIG/Salzinnes_staffLevel":
+                args.encoding = grammars.MEI_GABC
+            case "PRAIG/Solesmes_staffLevel":
+                args.encoding = grammars.S_GABC
+            case _:
+                raise RuntimeError("Cannot infer dataset encoding, please specify encoding type using --encoding argument")
+    metrics(args.predictions, ds, args.dataset, args.encoding, args.n_samples, args.per_sample_metric, args.threads)
 
 if __name__ == "__main__":
     args = parser.parse_args()
