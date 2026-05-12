@@ -185,28 +185,28 @@ def extract_music_lyrics_einsiedeln_salzinnes(predictions_file, dataset, dataset
 
 def tokenization_muaw(X, Y):
     words_X = []
-    music = False
+    i = 0
     syl = ""
-    for char in X:
-        if char == "(":
+    while i < len(X):
+        if X[i] == "(":
             if syl != "":
                 words_X.append(syl)
                 syl = ""
-            words_X.append(char)
-            music = True
-        elif char == ")":
-            words_X.append(char)
-            music = False
-        elif music:
-            words_X.append(char)
-        elif not music and char != " ":
-            syl += char
+            words_X.append(X[i])
+        elif X[i] == ")":
+            words_X.append(X[i])
+        elif X[i:i+3] == "<m>":
+            words_X.append(X[i+3])
+            i += 3
+        elif X[i] != " ":
+            syl += X[i]
+        i += 1
     words_Y = []
     i = 0
     syl = ""
     while i < len(Y):
         if Y[i] == "(":
-            if(syl != ""):
+            if syl != "":
                 words_Y.append(syl)
                 syl = ""
             words_Y.append(Y[i])
