@@ -116,7 +116,7 @@ class AMNLTSingleSystem(OMRIMG2SEQDataset):
         self.fixed_size = None
 
         self.dataset = load_dataset(dataset_name, split=split)
-        self.dataset = self.dataset.map(self.preprocess_gt)
+        self.dataset = self.dataset.map(self.preprocess_gt, load_from_cache_file=False)
         self.x, self.y = self.dataset[AMNLTSingleSystem.IMAGE], self.dataset[AMNLTSingleSystem.TRANSCRIPT]
 
     @staticmethod
