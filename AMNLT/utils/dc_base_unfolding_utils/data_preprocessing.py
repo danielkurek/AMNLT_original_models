@@ -61,18 +61,19 @@ def preprocess_image_from_file(path, unfolding=False, reduce=False):
 
 ################################# Transcript preprocessing:
 
-def preprocess_transcript_from_file(path, w2i, ds_name, encoding_type="char"):
+def preprocess_transcript_from_file(path, w2i, separation, encoding_type="char"):
     with open(path, "r") as f:
-        return preprocess_transcript(f.read(), w2i, ds_name, encoding_type)
+        return preprocess_transcript(f.read(), w2i, separation, encoding_type)
 
-def preprocess_transcript(transcript, w2i, ds_name, encoding_type="char"):
+def preprocess_transcript(transcript, w2i, separation=None, encoding_type="char"):
+    """
+    separation - None=no separation, "lyrics"=only lyrics are present, "music"=only music is present
+    """
     transcript = transcript.strip()
-    if (encoding_type == "char") or (encoding_type == "new_gabc" and ds_name in ["einsiedeln_lyrics", "salzinnes_lyrics"]):
-        raise NotImplementedError()
+    if (encoding_type == "char") or (encoding_type == "new_gabc" and separation == "lyrics"):
         return torch.tensor([w2i[c] for c in transcript])
         
-    elif encoding_type == "new_gabc" and ds_name in ["einsiedeln_music", "salzinnes_music"]:
-        raise NotImplementedError()
+    elif encoding_type == "new_gabc" and separation == "music":
         tokens = []
         i = 0
         temp = ''
@@ -91,7 +92,7 @@ def preprocess_transcript(transcript, w2i, ds_name, encoding_type="char"):
             tokens.append(temp)
         return torch.tensor([w2i[token] for token in tokens])                
     
-    elif encoding_type == "new_gabc" and ds_name in ["einsiedeln", "salzinnes", "PRAIG/Einsiedeln_staffLevel", "PRAIG/Salzinnes_staffLevel"]:
+    elif encoding_type == "new_gabc" and separation is None:
         tokens = []
         i = 0
         while i < len(transcript):

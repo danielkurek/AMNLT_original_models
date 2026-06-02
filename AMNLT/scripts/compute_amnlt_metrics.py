@@ -279,7 +279,7 @@ def metrics(predictions_file, dataset, dataset_name, dataset_encoding, n_samples
 
     if dataset_encoding == grammars.MEI_GABC:
         # Consider adding caching for the vocabulary
-        music_vocab, _ = make_vocabulary(dataset_name, "new_gabc", Separation.MUSIC)
+        music_vocab, _ = make_vocabulary(dataset_name, "new_gabc", Separation.MUSIC, dataset_encoding)
         sorted_music_vocab = sorted(music_vocab.keys(), key=len, reverse=True)
     
     if dataset_encoding in [grammars.GABC, grammars.S_GABC, grammars.COMMON]:

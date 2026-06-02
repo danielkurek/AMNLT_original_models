@@ -35,23 +35,23 @@ def dataset_separation(example, parser):
 # ds_name = name of HuggingFace dataset
 # encoding_type = ["char", "new_gabc", "music_aware"]
 # transcription_separation = [None, "lyric", "music"]
-def make_vocabulary(ds_name, encoding_type, transcription_separation: Separation = Separation.NONE):
+def make_vocabulary(ds_name, encoding_type, transcription_separation: Separation = Separation.NONE, grammar: str|None = None, num_proc=None):
         vocab = set()
         ds = load_dataset(ds_name)
 
-        if transcription_separation != Separation.NONE:
+        if transcription_separation != Separation.NONE and grammar is None:
             if ds_name == "PRAIG/GregoSynth_staffLevel":
-                gabc_variation = grammars.GABC
+                grammar = grammars.GABC
             elif ds_name == "PRAIG/Solesmes_staffLevel":
-                gabc_variation = grammars.S_GABC
+                grammar = grammars.S_GABC
             elif ds_name in ["PRAIG/Einsiedeln_staffLevel", "PRAIG/Salzinnes_staffLevel"]:
-                gabc_variation = grammars.MEI_GABC
+                grammar = grammars.MEI_GABC
             else:
                 raise ValueError(f"Could not infer gabc variation for the unknown dataset '{ds_name}'")
         
-            parser = GabcParser.load_parser(gabc_variation)
+            parser = GabcParser.load_parser(grammar)
 
-            ds = ds.map(functools.partial(dataset_separation, parser=parser), num_proc=8)
+            ds = ds.map(functools.partial(dataset_separation, parser=parser), num_proc=num_proc)
 
         key = CTCDataset.TRANSCRIPT
         if transcription_separation == Separation.LYRIC:
@@ -59,11 +59,7 @@ def make_vocabulary(ds_name, encoding_type, transcription_separation: Separation
         elif transcription_separation == Separation.MUSIC:
             key = "transcription_music"
 
-        if (encoding_type == "char") or (
-            encoding_type == "new_gabc" 
-            and ds_name in ["PRAIG/Einsiedeln_staffLevel", "PRAIG/Salzinnes_staffLevel"] 
-            and transcription_separation == Separation.LYRIC
-            ):
+        if (encoding_type == "char") or (encoding_type == "new_gabc" and transcription_separation == Separation.LYRIC):
             for split in ds.keys():
                 for y in ds[split][key]:
                     vocab.update(y.strip())
@@ -85,7 +81,7 @@ def make_vocabulary(ds_name, encoding_type, transcription_separation: Separation
                             # Add the normal character to the vocabulary
                             vocab.add(content[i])
                         i += 1
-        elif encoding_type == "new_gabc" and ds_name in ["PRAIG/Einsiedeln_staffLevel", "PRAIG/Salzinnes_staffLevel"] and transcription_separation == Separation.NONE:
+        elif encoding_type == "new_gabc" and transcription_separation == Separation.NONE:
             for split in ds.keys():
                 for y in ds[split][CTCDataset.TRANSCRIPT]:
                     content = y
@@ -112,7 +108,7 @@ def make_vocabulary(ds_name, encoding_type, transcription_separation: Separation
                             vocab.add(content[i])
                             i += 1
                             
-        elif encoding_type == "new_gabc" and ds_name in ["PRAIG/Einsiedeln_staffLevel", "PRAIG/Salzinnes_staffLevel"] and transcription_separation == Separation.MUSIC:
+        elif encoding_type == "new_gabc" and transcription_separation == Separation.MUSIC:
             for split in ds.keys():
                 for y in ds[split][key]:
                     content = y.strip()
@@ -203,7 +199,7 @@ class CTCDataset(Dataset):
 
         # CTC Training setting
         x = preprocess_image(self.X[idx], unfolding=unfolding, reduce=reduce)
-        y = preprocess_transcript(self.Y[idx], self.w2i, self.name, self.encoding_type)
+        y = preprocess_transcript(self.Y[idx], self.w2i, None, self.encoding_type)
         
         img_id = f"{self.split}_{idx}"
         
