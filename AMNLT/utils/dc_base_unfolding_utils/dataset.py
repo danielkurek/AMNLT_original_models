@@ -192,7 +192,7 @@ class CTCDataset(Dataset):
         if self.model_name == "fcn" or self.model_name == "crnnunfolding" or self.model_name == "cnnt2d" or self.model_name == "van":
             unfolding = True
             
-        if "gregoeli" in self.name and self.model_name in ["fcn", "crnnunfolding", "cnnt2d", "van"]:
+        if "GregoSynth" in self.name and self.model_name in ["fcn", "crnnunfolding", "cnnt2d", "van"]:
             reduce = True
         else:
             reduce = False
@@ -237,7 +237,7 @@ class CTCDataset(Dataset):
         
         reduce = False
         
-        if self.model_name == "cnnt2d" and self.name.startswith("gregoeli"):
+        if self.model_name == "cnnt2d" and "GregoSynth" in self.name:
             reduce = True
         
         max_height = max_width = 0
