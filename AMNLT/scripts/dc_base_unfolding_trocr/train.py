@@ -13,6 +13,8 @@ from AMNLT.utils.dc_base_unfolding_utils.data_preprocessing import ctc_batch_pre
 from AMNLT.utils.dc_base_unfolding_utils.dataset import CTCDataset
 from AMNLT.models.dc_base_unfolding_trocr_models.model import CTCTrainedCRNN, LightningE2EModelUnfolding #, CTCTrainedVAN # <- appears to be missing
 
+from pathlib import Path
+
 # Seed
 random.seed(42)
 np.random.seed(42)
@@ -56,6 +58,8 @@ def train(
     print(f"\tEpochs: {epochs}")
     print(f"\tPatience: {patience}")
     print(f"\tMetric to monitor: {metric_to_monitor}")
+
+    ds_print_name = Path(ds_name).stem
 
     # Get datasets
     train_ds = CTCDataset(
@@ -129,7 +133,7 @@ def train(
     callbacks = [
         ModelCheckpoint(
             dirpath=f"weights/{group}",
-            filename=f"{ds_name}_{encoding_type}_{model_name}_{ctc}",
+            filename=f"{ds_print_name}_{encoding_type}_{model_name}_{ctc}",
             monitor=metric_to_monitor,
             verbose=True,
             save_last=False,
@@ -152,7 +156,7 @@ def train(
             check_on_train_epoch_end=False,
         ),
     ]
-    experiment_name = f"{model_name.upper()}-{encoding_type.upper()}-Train-{ds_name}"
+    experiment_name = f"{model_name.upper()}-{encoding_type.upper()}-Train-{ds_print_name}"
     loggers = [
         TensorBoardLogger(
             save_dir="logs/",

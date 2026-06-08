@@ -21,6 +21,8 @@ import gabcparser.grammars as grammars
 from enum import Enum
 import functools
 
+from pathlib import Path
+
 ################################################################################################ Single-source:
 
 class Separation(Enum):
@@ -155,6 +157,7 @@ class CTCDataset(Dataset):
         encoding_type="char",
     ):
         self.name = ds_name
+        self.print_name = Path(ds_name).stem
         self.split = split
         self.model_name = model_name
         self.train = train
@@ -169,7 +172,7 @@ class CTCDataset(Dataset):
 
         # Check and retrieve vocabulary
         vocab_name = f"w2i_{self.encoding_type}.json"
-        vocab_folder = os.path.join(os.path.join("data", self.name), "vocab")
+        vocab_folder = os.path.join(os.path.join("data", self.print_name), "vocab")
         os.makedirs(vocab_folder, exist_ok=True)
         self.w2i_path = os.path.join(vocab_folder, vocab_name)
         self.w2i, self.i2w = self.check_and_retrieve_vocabulary()

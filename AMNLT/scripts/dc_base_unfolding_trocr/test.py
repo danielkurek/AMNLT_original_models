@@ -12,6 +12,8 @@ from torch.utils.data import DataLoader
 from AMNLT.utils.dc_base_unfolding_utils.dataset import CTCDataset
 from AMNLT.models.dc_base_unfolding_trocr_models.model import CTCTrainedCRNN, LightningE2EModelUnfolding
 
+from pathlib import Path
+
 # Seed
 random.seed(42)
 np.random.seed(42)
@@ -53,6 +55,8 @@ def test(
     print(f"\tCheckpoint path ({ds_name}): {checkpoint_path}")
     print(f"\tEncoding type: {encoding_type}")
 
+    ds_print_name = Path(ds_name).stem
+
     # Dataset
     test_ds = CTCDataset(
         ds_name=ds_name,
@@ -83,7 +87,7 @@ def test(
     model.freeze()
 
     # Test: automatically auto-loads the best weights from the previous run
-    run_name = f"{encoding_type.upper()}-Test-{ds_name}"
+    run_name = f"{encoding_type.upper()}-Test-{ds_print_name}"
     loggers = [
         TensorBoardLogger(
             save_dir="logs/",
