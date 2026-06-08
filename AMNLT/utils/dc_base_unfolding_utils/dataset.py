@@ -51,8 +51,8 @@ def make_vocabulary(ds_name, encoding_type, transcription_separation: Separation
             else:
                 raise ValueError(f"Could not infer gabc variation for the unknown dataset '{ds_name}'")
         
+        if transcription_separation != Separation.NONE:
             parser = GabcParser.load_parser(grammar)
-
             ds = ds.map(functools.partial(dataset_separation, parser=parser), num_proc=num_proc)
 
         key = CTCDataset.TRANSCRIPT
