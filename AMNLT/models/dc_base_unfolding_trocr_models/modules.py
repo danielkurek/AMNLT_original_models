@@ -55,7 +55,7 @@ class RNN(nn.Module):
         super(RNN, self).__init__()
 
         self.blstm = nn.LSTM(
-            input_size,
+            int(input_size),
             256,
             num_layers=2,
             batch_first=True,
