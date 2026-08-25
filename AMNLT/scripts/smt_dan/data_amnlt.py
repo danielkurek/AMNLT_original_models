@@ -114,6 +114,7 @@ class AMNLTSingleSystem(OMRIMG2SEQDataset):
         self.num_sys_gen = 1
         self.fixed_systems_num = False
         self.fixed_size = None
+        self.name = dataset_name
 
         self.dataset = load_dataset(dataset_name, split=split)
         self.dataset = self.dataset.map(self.preprocess_gt, load_from_cache_file=False)
