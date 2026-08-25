@@ -8,7 +8,7 @@ import sys
 from typing import Any
 
 from torchinfo import summary
-from eval_functions import compute_metric
+from AMNLT.scripts.smt_dan.eval_functions import compute_metric
 from AMNLT.models.dan_smt_model.configuration_smt import SMTConfig
 from AMNLT.models.dan_smt_model.modeling_dan import DANForCausalLM
 
