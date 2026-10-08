@@ -106,8 +106,7 @@ class AMNLTSingleSystem(OMRIMG2SEQDataset):
     TRANSCRIPT = "transcription"
 
     def __init__(self, dataset_name, split, notation, reduce_ratio, augment=False) -> None:
-        self.augment = augment
-        self.teacher_forcing_error_rate = 0.2
+        super().__init__(augment=augment)
         self.reduce_ratio = reduce_ratio
         self.notation = notation
         self.tensorTransform = transforms.ToTensor()
