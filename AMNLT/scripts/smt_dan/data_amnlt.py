@@ -6,6 +6,7 @@ import numpy as np
 import cv2
 import sys
 import gc
+import math
 
 from AMNLT.configs.smt_dan_config.ExperimentConfig import ExperimentConfig
 from AMNLT.utils.smt_dan_utils.data_augmentation import augment, convert_img_to_tensor
@@ -16,7 +17,12 @@ from torch.utils.data import Dataset
 from torchvision import transforms
 import torchvision.transforms.v2 as v2
 
+from typing import TypeAlias
+from numbers import Real
+
 from datasets import load_dataset
+
+ResizeType: TypeAlias = None | float | tuple[int | None, int | None]
 
 def batch_preparation_img2seq(data):
     images = [sample[0] for sample in data]
@@ -105,16 +111,44 @@ class AMNLTSingleSystem(OMRIMG2SEQDataset):
     IMAGE = "image"
     TRANSCRIPT = "transcription"
 
-    def __init__(self, dataset_name, split, notation, reduce_ratio, augment=False) -> None:
+    def __init__(self, dataset_name, split, notation, resize: ResizeType = None, augment=False) -> None:
+        """
+        resize : float or tuple[int | None, int | None], optional
+            Specifies the target image size. A float specifies a scaling
+            ratio. A tuple ``(height, width)`` specifies the target dimensions;
+            either dimension can be ``None`` to preserve the original aspect
+            ratio and infer that dimension.
+        """
         super().__init__(augment=augment)
-        self.reduce_ratio = reduce_ratio
         self.notation = notation
-        self.fixed_size = None
         self.name = dataset_name
+        self.resize_mode, self.resize_value = self._parse_resize(resize)
 
         self.dataset = load_dataset(dataset_name, split=split)
         self.dataset = self.dataset.map(self.preprocess_gt, load_from_cache_file=False)
         self.x, self.y = self.dataset[AMNLTSingleSystem.IMAGE], self.dataset[AMNLTSingleSystem.TRANSCRIPT]
+    
+    @staticmethod
+    def _parse_resize(resize):
+        if resize is None:
+            return "none", None
+        
+        if isinstance(resize, Real) and not isinstance(resize, bool):
+            if resize <= 0:
+                raise ValueError("Resize ratio must be > 0")
+            return "ratio", float(resize)
+        
+        if isinstance(resize, (tuple,list)):
+            if len(resize) != 2:
+                raise ValueError("Resize must have two elements [width, height]")
+            height, width = resize
+            
+            if height is None and width is None:
+                raise ValueError("Resize must have at least one dimension specified")
+            
+            return "size", (height, width)
+        
+        raise TypeError("resize must be None, a float, or (height, width)")
 
     def get_width_avgs(self):
         widths = [self._get_new_img_size(img.size[1], img.size[0])[1] for img in self.x]
@@ -125,13 +159,23 @@ class AMNLTSingleSystem(OMRIMG2SEQDataset):
         return max_size[0], max_size[1]
     
     def _get_new_img_size(self, height, width):
-        if self.fixed_size != None:
-            width = self.fixed_size[1]
-            height = self.fixed_size[0]
-        else:
-            width = int(np.ceil(min(width, 3056) * self.reduce_ratio))
-            height = int(np.ceil(max(height, 256) * self.reduce_ratio))
-        return height, width
+        if self.resize_mode == "none":
+            return height, width
+        
+        if self.resize_mode == "ratio":
+            width = int(np.ceil(min(width, 3056) * self.resize_value))
+            height = int(np.ceil(max(height, 256) * self.resize_value))
+            return height, width
+        
+        if self.resize_mode == "size":
+            target_height, target_width = self.resize_value
+            if target_height is None:
+                target_height = math.ceil(height * (target_width / width))
+            if target_width is None:
+                target_width = math.ceil(width * (target_height / height))
+            return target_height, target_width
+        
+        raise ValueError("Invalid resize mode")
 
     def __getitem__(self, index):
         x = v2.functional.to_image(self.x[index])
