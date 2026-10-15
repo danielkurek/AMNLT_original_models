@@ -153,7 +153,7 @@ class CTCDataset(Dataset):
         model_name,
         train=True,
         da_train=False,
-        width_reduction=2,
+        crnn_width_reduction=2,
         encoding_type="char",
     ):
         self.name = ds_name
@@ -162,7 +162,7 @@ class CTCDataset(Dataset):
         self.model_name = model_name
         self.train = train
         self.da_train = da_train
-        self.width_reduction = width_reduction
+        self.crnn_width_reduction = crnn_width_reduction
         self.encoding_type = encoding_type
 
         # Get image paths and transcripts
@@ -211,7 +211,7 @@ class CTCDataset(Dataset):
             if self.model_name == "fcn" or self.model_name == "crnnunfolding" or self.model_name == "cnnt2d" or self.model_name == "van":
                 return x, (x.shape[2] // 8) * (x.shape[1] // 32), y, len(y), img_id
             elif self.model_name == "crnn":
-                return x, x.shape[2] // self.width_reduction, y, len(y), img_id
+                return x, x.shape[2] // self.crnn_width_reduction, y, len(y), img_id
             elif self.model_name == "ctc_van":
                 return x, x.shape[2] // 8, y, len(y), img_id
             

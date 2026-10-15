@@ -127,7 +127,7 @@ def train(
                 w2i=train_ds.w2i, i2w=train_ds.i2w, ctc=ctc, use_augmentations=use_augmentations, ds_name=ds_name
             )
     if(model_name == "crnn"):
-        train_ds.width_reduction = model.model.cnn.width_reduction
+        train_ds.crnn_width_reduction = model.model.cnn.width_reduction
 
     # Train and validate
     callbacks = [
