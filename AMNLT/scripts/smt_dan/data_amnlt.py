@@ -140,7 +140,7 @@ class AMNLTSingleSystem(OMRIMG2SEQDataset):
         
         if isinstance(resize, (tuple,list)):
             if len(resize) != 2:
-                raise ValueError("Resize must have two elements [width, height]")
+                raise ValueError("Resize must have two elements (height, width)")
             height, width = resize
             
             if height is None and width is None:
