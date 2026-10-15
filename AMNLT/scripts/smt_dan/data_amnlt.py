@@ -8,7 +8,7 @@ import sys
 import gc
 import math
 
-from AMNLT.configs.smt_dan_config.ExperimentConfig import ExperimentConfig
+from AMNLT.configs.smt_dan_config.ExperimentConfig import ExperimentConfig, ResizeType
 from AMNLT.utils.smt_dan_utils.data_augmentation import augment, convert_img_to_tensor
 from AMNLT.utils.smt_dan_utils.utils import check_and_retrieveVocabulary
 from rich import progress
@@ -17,12 +17,9 @@ from torch.utils.data import Dataset
 from torchvision import transforms
 import torchvision.transforms.v2 as v2
 
-from typing import TypeAlias
 from numbers import Real
 
 from datasets import load_dataset
-
-ResizeType: TypeAlias = None | float | tuple[int | None, int | None]
 
 def batch_preparation_img2seq(data):
     images = [sample[0] for sample in data]
@@ -252,11 +249,11 @@ class AMNLTDataset(LightningDataModule):
         self.batch_size = config.batch_size
         self.num_workers = config.num_workers
         self.notation = config.transcript_format
-        self.reduce_ratio = config.reduce_ratio
+        self.resize = config.resize
 
-        self.train_set = AMNLTSingleSystem(self.dataset_name, "train", self.notation, self.reduce_ratio, augment=True)
-        self.val_set = AMNLTSingleSystem(self.dataset_name, "validation", self.notation, self.reduce_ratio)
-        self.test_set = AMNLTSingleSystem(self.dataset_name, "test", self.notation, self.reduce_ratio)
+        self.train_set = AMNLTSingleSystem(self.dataset_name, "train", self.notation, self.resize, augment=True)
+        self.val_set = AMNLTSingleSystem(self.dataset_name, "validation", self.notation, self.resize)
+        self.test_set = AMNLTSingleSystem(self.dataset_name, "test", self.notation, self.resize)
 
         if self.notation == "music_aware":
             vocab_name = self.vocab_name + "_music_aware"
