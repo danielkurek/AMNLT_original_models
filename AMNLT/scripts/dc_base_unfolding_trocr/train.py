@@ -9,7 +9,7 @@ from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
 from lightning.pytorch.loggers import WandbLogger, TensorBoardLogger
 from torch.utils.data import DataLoader
 
-from AMNLT.utils.dc_base_unfolding_utils.data_preprocessing import ctc_batch_preparation
+from AMNLT.utils.dc_base_unfolding_utils.data_preprocessing import ctc_batch_preparation, IMG_HEIGHT
 from AMNLT.utils.dc_base_unfolding_utils.dataset import CTCDataset
 from AMNLT.models.dc_base_unfolding_trocr_models.model import CTCTrainedCRNN, LightningE2EModelUnfolding #, CTCTrainedVAN # <- appears to be missing
 
@@ -32,6 +32,7 @@ def train(
     patience=5,
     batch_size=16,   # Change to 16 if using CRNN with post-processing or 1 if using FCN (space-issue in graphics card)
     use_augmentations=True,
+    img_fixed_height=None,
     metric_to_monitor="val_cer",
     project="AMNLT",
     group="Baseline-CharacterLevel",
@@ -67,6 +68,7 @@ def train(
         split="train",
         model_name=model_name,
         encoding_type=encoding_type,
+        img_fixed_height=img_fixed_height
     )        
     train_loader = DataLoader(
         train_ds,
@@ -81,6 +83,7 @@ def train(
         model_name=model_name,
         train=False,
         encoding_type=encoding_type,
+        img_fixed_height=img_fixed_height
     )
     val_loader = DataLoader(
         val_ds, batch_size=1, shuffle=False, num_workers=num_workers
@@ -91,6 +94,7 @@ def train(
         model_name=model_name,
         train=False,
         encoding_type=encoding_type,
+        img_fixed_height=img_fixed_height
     )
     test_loader = DataLoader(
         test_ds, batch_size=1, shuffle=False, num_workers=num_workers
@@ -114,13 +118,17 @@ def train(
         elif(model_name == "fcn"):
             model = LightningE2EModelUnfolding.load_from_checkpoint(pretrain_model_path, strict=False)
     else:
+        # fallback to original value if img_fixed_height is not specified
+        img_height = img_fixed_height if img_fixed_height is not None else IMG_HEIGHT
         if(model_name == "crnn"):
             model = CTCTrainedCRNN(
-                w2i=train_ds.w2i, i2w=train_ds.i2w, ctc=ctc, use_augmentations=use_augmentations, ds_name=ds_name
+                w2i=train_ds.w2i, i2w=train_ds.i2w, ctc=ctc, use_augmentations=use_augmentations, ds_name=ds_name,
+                img_height=img_height
             )
         elif(model_name == "fcn" or model_name == "crnnunfolding" or model_name == "cnnt2d" or model_name == "van"):
             model = LightningE2EModelUnfolding(
-                w2i=train_ds.w2i, i2w=train_ds.i2w, model=model_name, use_augmentations=use_augmentations, mh=max_h, mw=max_w
+                w2i=train_ds.w2i, i2w=train_ds.i2w, model=model_name, use_augmentations=use_augmentations, mh=max_h, mw=max_w,
+                img_height=img_height
             )
         elif(model_name == "ctc_van"):
             model = CTCTrainedVAN(

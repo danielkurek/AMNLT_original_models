@@ -1,6 +1,7 @@
 import re
 import joblib
 import sys
+import math
 
 import torch
 import torch.nn.functional as F
@@ -19,10 +20,16 @@ toTensor = transforms.ToTensor()
 
 ################################# Image preprocessing:
 
-def preprocess_image(img, unfolding=False, reduce=False):
+def preprocess_image(img, img_fixed_height=None, unfolding=False, reduce=False):
     x = img.convert("L")
 
-    if not unfolding:
+    if img_fixed_height is not None:
+        new_width = math.ceil(img_fixed_height * x.size[0] / x.size[1])
+        x = x.resize((new_width, img_fixed_height))
+        if unfolding:
+            x = x.rotate(-90, expand=True)
+    
+    elif not unfolding:
         # Not preserving aspect ratio
         #new_width = x.width // 4
         #x = x.resize((new_width, IMG_HEIGHT))  # Resize
@@ -53,9 +60,9 @@ def preprocess_image(img, unfolding=False, reduce=False):
     #sys.exit()
     return x
 
-def preprocess_image_from_file(path, unfolding=False, reduce=False):
+def preprocess_image_from_file(path, img_fixed_height=None, unfolding=False, reduce=False):
     img = Image.open(path)
-    preprocess_image(img, unfolding, reduce)
+    return preprocess_image(img, img_fixed_height, unfolding, reduce)
     
 
 

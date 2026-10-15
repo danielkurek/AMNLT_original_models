@@ -352,13 +352,13 @@ class LineDecoder(nn.Module):
 ############## Models ##############
 
 class CRNN(nn.Module):
-    def __init__(self, output_size):
+    def __init__(self, output_size, img_height):
         super(CRNN, self).__init__()
         # CNN
         self.cnn = CNN()
         # RNN
         self.rnn_input_size = self.cnn.out_channels * (
-            IMG_HEIGHT // self.cnn.height_reduction
+            img_height // self.cnn.height_reduction
         )
         self.rnn = RNN(input_size=self.rnn_input_size, output_size=output_size)
 

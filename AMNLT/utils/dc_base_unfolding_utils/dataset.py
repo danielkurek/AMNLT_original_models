@@ -151,6 +151,7 @@ class CTCDataset(Dataset):
         ds_name,
         split,
         model_name,
+        img_fixed_height = None,
         train=True,
         da_train=False,
         crnn_width_reduction=2,
@@ -160,6 +161,7 @@ class CTCDataset(Dataset):
         self.print_name = Path(ds_name).stem
         self.split = split
         self.model_name = model_name
+        self.img_fixed_height = img_fixed_height # None = original behaviour
         self.train = train
         self.da_train = da_train
         self.crnn_width_reduction = crnn_width_reduction
@@ -201,7 +203,7 @@ class CTCDataset(Dataset):
             reduce = False
 
         # CTC Training setting
-        x = preprocess_image(self.X[idx], unfolding=unfolding, reduce=reduce)
+        x = preprocess_image(self.X[idx], self.img_fixed_height ,unfolding=unfolding, reduce=reduce)
         y = preprocess_transcript(self.Y[idx], self.w2i, None, self.encoding_type)
         
         img_id = f"{self.split}_{idx}"
@@ -245,7 +247,7 @@ class CTCDataset(Dataset):
         
         max_height = max_width = 0
         for img in self.X:
-            x = preprocess_image(img, unfolding=True, reduce=reduce)
+            x = preprocess_image(img, self.img_fixed_height, unfolding=True, reduce=reduce)
             max_height = max(max_height, x.shape[1])
             max_width = max(max_width, x.shape[2])
         return max_height, max_width

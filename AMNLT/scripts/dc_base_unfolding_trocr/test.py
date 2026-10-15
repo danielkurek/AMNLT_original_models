@@ -9,6 +9,7 @@ from lightning.pytorch import Trainer
 from lightning.pytorch.loggers import WandbLogger, TensorBoardLogger
 from torch.utils.data import DataLoader
 
+from AMNLT.utils.dc_base_unfolding_utils.data_preprocessing import IMG_HEIGHT
 from AMNLT.utils.dc_base_unfolding_utils.dataset import CTCDataset
 from AMNLT.models.dc_base_unfolding_trocr_models.model import CTCTrainedCRNN, LightningE2EModelUnfolding
 
@@ -28,6 +29,7 @@ def test(
     ds_name,
     checkpoint_path,
     model_name,
+    img_fixed_height=None,
     encoding_type="char",
     project="AMNLT",
     group="Baseline-CharacterLevel",
@@ -64,6 +66,7 @@ def test(
         model_name=model_name,
         train=False,
         encoding_type=encoding_type,
+        img_fixed_height=img_fixed_height
     )
     
     if model_name == "cnnt2d":
@@ -75,6 +78,9 @@ def test(
         test_ds, batch_size=1, shuffle=False, num_workers=num_workers
     )  # prefetch_factor=2
 
+    # fallback to original value if img_fixed_height is not specified
+    img_height = img_fixed_height if img_fixed_height is not None else IMG_HEIGHT
+
     # Model
     if(model_name == "crnn"):
         model = CTCTrainedCRNN.load_from_checkpoint(
@@ -85,6 +91,9 @@ def test(
             checkpoint_path, ytest_i2w=test_ds.i2w, model=model_name, mh=mh, mw=mw
         )
     model.freeze()
+
+    if model.example_input_size[2] != img_height:
+        raise RuntimeError("Model was trained with different image height")
 
     # Test: automatically auto-loads the best weights from the previous run
     run_name = f"{encoding_type.upper()}-Test-{ds_print_name}"

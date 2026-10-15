@@ -13,15 +13,15 @@ from torchinfo import summary
 from torchvision.utils import save_image
 
 from AMNLT.utils.dc_base_unfolding_utils.augmentations import AugmentStage
-from AMNLT.utils.dc_base_unfolding_utils.data_preprocessing import IMG_HEIGHT, NUM_CHANNELS
 from AMNLT.utils.dc_base_unfolding_utils.metrics import compute_metrics, ctc_greedy_decoder
+from AMNLT.utils.dc_base_unfolding_utils.data_preprocessing import IMG_HEIGHT, NUM_CHANNELS
 from AMNLT.models.dc_base_unfolding_trocr_models.modules import CRNN
 from AMNLT.models.dc_base_unfolding_trocr_models.modules import E2EScore_FCN, E2EScore_CRNN, E2EScore_CNNT2D, E2EScore_VAN, VANCTCModel
 
 from transformers import VisionEncoderDecoderModel, TrOCRProcessor, PreTrainedTokenizerFast
 
 class CTCTrainedCRNN(LightningModule):
-    def __init__(self, w2i, i2w, ctc, use_augmentations=True, ytest_i2w=None, check_train=False, ds_name=None):
+    def __init__(self, w2i, i2w, ctc, img_height=IMG_HEIGHT, img_channels=NUM_CHANNELS, use_augmentations=True, ytest_i2w=None, check_train=False, ds_name=None):
         super(CTCTrainedCRNN, self).__init__()
         # Save hyperparameters
         self.save_hyperparameters()
@@ -30,8 +30,9 @@ class CTCTrainedCRNN(LightningModule):
         self.i2w = i2w
         self.ytest_i2w = ytest_i2w if ytest_i2w is not None else i2w
         # Model
-        self.model = CRNN(output_size=len(self.w2i) + 1)
-        self.summary = summary(self.model, input_size=(1, NUM_CHANNELS, IMG_HEIGHT, 256))
+        self.model = CRNN(output_size=len(self.w2i) + 1, img_height=img_height)
+        self.example_input_size = (1, img_channels, img_height, 256)
+        self.summary()
         # Augmentations
         self.augment = AugmentStage() if use_augmentations else lambda x: x
         # Loss
@@ -62,7 +63,7 @@ class CTCTrainedCRNN(LightningModule):
         self.threshold = 4
 
     def summary(self):
-        summary(self.model, input_size=[1, NUM_CHANNELS, IMG_HEIGHT, 256])
+        summary(self.model, input_size=self.example_input_size)
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.model.parameters(), lr=1e-3)
@@ -165,7 +166,7 @@ class CTCTrainedCRNN(LightningModule):
         return self.on_validation_epoch_end(name="test", print_random_samples=True)
 
 class LightningE2EModelUnfolding(LightningModule):
-    def __init__(self, w2i, i2w, model, use_augmentations=True, ytest_i2w=None, encoding_type="char", mh=0, mw=0):
+    def __init__(self, w2i, i2w, model, img_height=IMG_HEIGHT, img_num_channels=NUM_CHANNELS, use_augmentations=True, ytest_i2w=None, encoding_type="char", mh=0, mw=0):
         super(LightningE2EModelUnfolding, self).__init__()
         # Save hyperparameters
         self.save_hyperparameters()
@@ -182,6 +183,7 @@ class LightningE2EModelUnfolding(LightningModule):
             self.model = E2EScore_CNNT2D(1, len(self.w2i) + 1, mh, mw)
         elif model == "van":
             self.model = E2EScore_VAN(1, len(self.w2i) + 1)
+        self.example_input_size = (1, img_num_channels, img_height, 256)
         self.summary()
         # Augmentations
         self.augment = AugmentStage() if use_augmentations else lambda x: x
@@ -201,7 +203,7 @@ class LightningE2EModelUnfolding(LightningModule):
         self.threshold = 4
         
     def summary(self):
-        summary(self.model, input_size=[1, NUM_CHANNELS, IMG_HEIGHT, 256])
+        summary(self.model, input_size=self.example_input_size)
      
     # Checking if a bigger learning rate helps   
     def configure_optimizers(self):
