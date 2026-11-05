@@ -20,14 +20,15 @@ toTensor = transforms.ToTensor()
 
 ################################# Image preprocessing:
 
-def preprocess_image(img, img_fixed_height=None, unfolding=False, reduce=False):
+def preprocess_image(img, img_fixed_height=None, img_max_width=None, unfolding=False, reduce=False):
     x = img.convert("L")
 
+    new_width = None
+    new_height = None
+
     if img_fixed_height is not None:
+        new_height = img_fixed_height
         new_width = math.ceil(img_fixed_height * x.size[0] / x.size[1])
-        x = x.resize((new_width, img_fixed_height))
-        if unfolding:
-            x = x.rotate(-90, expand=True)
     
     elif not unfolding:
         # Not preserving aspect ratio
@@ -36,33 +37,40 @@ def preprocess_image(img, img_fixed_height=None, unfolding=False, reduce=False):
         
         # CRNN
         # Resize (preserving aspect ratio)
+        new_height = IMG_HEIGHT
         new_width = int(
             IMG_HEIGHT * x.size[0] / x.size[1]
         )
-        x = x.resize((new_width, IMG_HEIGHT))
     
     # If the boolean flag is True, rotate -90 degrees and flip horizontally
     else:
         reduction_factor = 2
         new_width = x.width // reduction_factor
         new_height = x.height // reduction_factor
-        
         if reduce:
             reduce_factor = 0.5
             new_width = int(new_width * reduce_factor)
             new_height = int(new_height * reduce_factor)
-        
-        x = x.resize((new_width, new_height))
-        x = x.rotate(-90, expand=True)  # Rotate by -90 degrees
     
+    if new_height is None:
+        new_height = x.height
+    if new_width is None:
+        new_width = x.width
+    
+    if img_max_width is not None:
+        new_width = min(new_width, img_max_width)
+    
+    x = x.resize((new_width, new_height))
+    if unfolding:
+        x = x.rotate(-90, expand=True)
     x = toTensor(x)  # Convert to tensor (normalizes to [0, 1])
     #print(x.shape)
     #sys.exit()
     return x
 
-def preprocess_image_from_file(path, img_fixed_height=None, unfolding=False, reduce=False):
+def preprocess_image_from_file(path, img_fixed_height=None, img_max_width=None, unfolding=False, reduce=False):
     img = Image.open(path)
-    return preprocess_image(img, img_fixed_height, unfolding, reduce)
+    return preprocess_image(img, img_fixed_height=img_fixed_height, img_max_width=img_max_width, unfolding=unfolding, reduce=reduce)
     
 
 

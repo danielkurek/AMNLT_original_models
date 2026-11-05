@@ -108,7 +108,7 @@ class AMNLTSingleSystem(OMRIMG2SEQDataset):
     IMAGE = "image"
     TRANSCRIPT = "transcription"
 
-    def __init__(self, dataset_name, split, notation, resize: ResizeType = None, augment=False) -> None:
+    def __init__(self, dataset_name, split, notation, resize: ResizeType = None, img_max_width = None, augment=False) -> None:
         """
         resize : float or tuple[int | None, int | None], optional
             Specifies the target image size. A float specifies a scaling
@@ -119,6 +119,7 @@ class AMNLTSingleSystem(OMRIMG2SEQDataset):
         super().__init__(augment=augment)
         self.notation = notation
         self.name = dataset_name
+        self.img_max_width = img_max_width
         self.resize_mode, self.resize_value = self._parse_resize(resize)
 
         self.dataset = load_dataset(dataset_name, split=split)
@@ -156,21 +157,24 @@ class AMNLTSingleSystem(OMRIMG2SEQDataset):
         return max_size[0], max_size[1]
     
     def _get_new_img_size(self, height, width):
+        new_height, new_width = None, None
         if self.resize_mode == "none":
-            return height, width
-        
-        if self.resize_mode == "ratio":
+            new_height, new_width = height, width
+        elif self.resize_mode == "ratio":
             width = int(np.ceil(min(width, 3056) * self.resize_value))
             height = int(np.ceil(max(height, 256) * self.resize_value))
-            return height, width
-        
-        if self.resize_mode == "size":
+            new_height, new_width = height, width
+        elif self.resize_mode == "size":
             target_height, target_width = self.resize_value
             if target_height is None:
                 target_height = math.ceil(height * (target_width / width))
             if target_width is None:
                 target_width = math.ceil(width * (target_height / height))
-            return target_height, target_width
+            new_height, new_width = target_height, target_width
+        if new_height is not None and new_width is not None:
+            if self.img_max_width is not None:
+                return new_height, min(new_width, self.img_max_width)
+            return new_height, new_width
         
         raise ValueError("Invalid resize mode")
 
@@ -249,11 +253,12 @@ class AMNLTDataset(LightningDataModule):
         self.batch_size = config.batch_size
         self.num_workers = config.num_workers
         self.notation = config.transcript_format
+        self.img_max_width = config.img_max_width
         self.resize = config.resize
 
-        self.train_set = AMNLTSingleSystem(self.dataset_name, "train", self.notation, self.resize, augment=True)
-        self.val_set = AMNLTSingleSystem(self.dataset_name, "validation", self.notation, self.resize)
-        self.test_set = AMNLTSingleSystem(self.dataset_name, "test", self.notation, self.resize)
+        self.train_set = AMNLTSingleSystem(self.dataset_name, "train", self.notation, self.resize, self.img_max_width, augment=True)
+        self.val_set = AMNLTSingleSystem(self.dataset_name, "validation", self.notation, self.resize, self.img_max_width)
+        self.test_set = AMNLTSingleSystem(self.dataset_name, "test", self.notation, self.resize, self.img_max_width)
 
         if self.notation == "music_aware":
             vocab_name = self.vocab_name + "_music_aware"

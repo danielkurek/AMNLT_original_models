@@ -18,6 +18,10 @@ def from_int(x: Any) -> int:
     assert isinstance(x, int) and not isinstance(x, bool)
     return x
 
+def from_optional_int(x: Any) -> int|None:
+    assert x is None or (isinstance(x, int) and not isinstance(x, bool))
+    return x
+
 
 def from_float(x: Any) -> float:
     assert isinstance(x, (float, int)) and not isinstance(x, bool)
@@ -68,6 +72,7 @@ class Data:
     vocab_name: str
     num_workers: int
     resize: ResizeType
+    img_max_width: int | None
     transcript_format: str
 
     @staticmethod
@@ -80,8 +85,9 @@ class Data:
         assert "resize" in obj or "reduce_ratio" in obj, \
             'Config field "resize" is required (use null for no resize, or legacy "reduce_ratio")'
         resize = from_resize(obj.get("resize", obj.get("reduce_ratio")))
+        img_max_width = from_optional_int(obj.get("img_max_width"))
         transcript_format = from_str(obj.get("transcript_format"))
-        return Data(dataset_name, batch_size, vocab_name, num_workers, resize, transcript_format)
+        return Data(dataset_name, batch_size, vocab_name, num_workers, resize, img_max_width, transcript_format)
 
     def to_dict(self) -> dict:
         result: dict = {}
@@ -90,6 +96,7 @@ class Data:
         result["vocab_name"] = from_str(self.vocab_name)
         result["num_workers"] = from_int(self.num_workers)
         result["resize"] = to_resize(self.resize)
+        result["img_max_width"] = from_optional_int(self.img_max_width)
         result["transcript_format"] = from_str(self.transcript_format)
         return result
 
