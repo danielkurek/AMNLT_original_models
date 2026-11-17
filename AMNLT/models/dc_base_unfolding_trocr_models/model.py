@@ -102,7 +102,12 @@ class CTCTrainedCRNN(LightningModule):
                 self.log(f"train_{k}", v, prog_bar=True, logger=True, on_epoch=True)
         
         return loss
-    
+
+    def on_train_epoch_end(self):
+        # Clear per-step bookkeeping to avoid unbounded host-RAM growth
+        self.losses.clear()
+        self.img_ids.clear()
+
     def on_training_epoch_end(self):
         avg_loss = 0.0
         
@@ -160,6 +165,7 @@ class CTCTrainedCRNN(LightningModule):
         # Clear predictions
         self.Y.clear()
         self.YHat.clear()
+        self.raw_ctcs.clear()
         return metrics
 
     def on_test_epoch_end(self):
@@ -220,12 +226,17 @@ class LightningE2EModelUnfolding(LightningModule):
         loss = self.compute_ctc_loss(yhat, y, torch.tensor(yhat.size()[0], dtype=torch.long), yl)
         # Save the best and worst predictions
         
-        self.losses.append(loss)
+        self.losses.append(loss.item())
         self.img_paths.append(img_path[0])
         
         self.log("train_loss", loss, prog_bar=True, logger=True, on_epoch=True)
         return loss
-    
+
+    def on_train_epoch_end(self):
+        # Clear per-step bookkeeping to avoid unbounded host-RAM growth
+        self.losses.clear()
+        self.img_paths.clear()
+
     def check_image(self, x, loss, img_path, avg_loss, loss_dir):      
         if abs(loss - avg_loss) > self.threshold:
             loss_path = os.path.join(loss_dir, os.path.basename(img_path))
