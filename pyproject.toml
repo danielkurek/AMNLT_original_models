@@ -32,7 +32,7 @@ dependencies = [
     "Pillow",
     "scikit_learn",
     "editdistance",
-    "gin-config @ git+https://github.com/google/gin-config",
+    "gin-config @ git+https://github.com/google/gin-config@4f1e3c31b41dfa5d1accef5ef9f87f0eb4aeff65",
     "fire",
     "gin_config",
     "lightning",
@@ -52,7 +52,7 @@ dependencies = [
     "transformers",
     "visualizer",
     "wandb>=0.12.10",
-    "gabcparser @ git+https://github.com/danielkurek/GabcParser"
+    "gabcparser @ git+https://github.com/danielkurek/GabcParser@74c73d82b8cbd4cc25eb4567a76d702383f84e65"
 ]
 classifiers = [
     "Private :: Do Not Upload"
