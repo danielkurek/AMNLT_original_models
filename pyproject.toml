@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "AMNLT"
-version = "2025.0.0"
+version = "2026.1.0"
 dependencies = [
     "datasets",
     "numpy",
@@ -52,7 +52,7 @@ dependencies = [
     "transformers",
     "visualizer",
     "wandb>=0.12.10",
-    "gabcparser @ git+https://github.com/danielkurek/GabcParser@74c73d82b8cbd4cc25eb4567a76d702383f84e65"
+    "gabcparser @ git+https://github.com/danielkurek/GabcParser@6bf0abbd72266877dc0556be6c192fad018e31c4"
 ]
 classifiers = [
     "Private :: Do Not Upload"
