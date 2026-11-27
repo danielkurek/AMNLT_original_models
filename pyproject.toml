@@ -52,7 +52,7 @@ dependencies = [
     "transformers",
     "visualizer",
     "wandb>=0.12.10",
-    "gabcparser @ git+https://github.com/danielkurek/GabcParser@6bf0abbd72266877dc0556be6c192fad018e31c4"
+    "gabcparser @ git+https://github.com/danielkurek/GabcParser@e9cd26f4ee570db9b72c6e85a3cb61da0b97dd2b"
 ]
 classifiers = [
     "Private :: Do Not Upload"
